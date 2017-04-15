@@ -123,7 +123,7 @@ class Neuron (object):
             self.signalsReceived   = 0
 
     def sigmoid(self):
-        return 1 / (1+math.exp(self.accumulatedWeight))
+        return 1 / (1+math.exp(self.accumulatedWeight * -1))
 
 class Synapse (object):
 
