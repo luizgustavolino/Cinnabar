@@ -123,7 +123,9 @@ class Neuron (object):
             self.signalsReceived   = 0
 
     def sigmoid(self):
-        return 1 / (1+math.exp(self.accumulatedWeight * -1))
+        sigmoidValue = 1 / (1+math.exp(self.accumulatedWeight * -1))
+        if sigmoidValue > 1 or sigmoidValue < 0: raise NameError('INVALID SIGMOID VALUE')
+        return sigmoidValue
 
 class Synapse (object):
 
@@ -150,6 +152,3 @@ class Bias (object):
 
     def signal(self):
         self.destiny.receiveSignal(self.weight * 1, "bias")
-
-trab = MLP([4,8,5,3])
-trab.forward([0.4, 0.1, 0.4, 0.9])

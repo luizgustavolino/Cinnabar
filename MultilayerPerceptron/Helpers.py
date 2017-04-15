@@ -18,7 +18,7 @@ def printTable(rows, start = ""):
     print( start + '-+-'.join( '-' * width for width in widths ) )
 
     for row in data:
-        print( start + 
+        print( start +
             " | ".join( format(cdata, "%ds" % width)
             for width, cdata in zip(widths, row)
         ))
@@ -56,3 +56,65 @@ def parseArguments():
         return response
     else:
         showHelp()
+
+
+def fileArguments():
+    files = [
+        {
+            "file": "input/iris.csv",
+            "separator": ",",
+            "class-index": 4
+        },
+        {
+            "file": "input/breast.csv",
+            "separator": ";",
+            "class-index": 9
+        },
+        {
+            "file": "input/wine.csv",
+            "separator": ",",
+            "class-index": 0
+        },
+        {
+            "file": "input/abalone.csv",
+            "separator": ",",
+            "class-index": 0
+        },
+        {
+            "file": "input/adult.csv",
+            "separator": ",",
+            "class-index": 14
+        },
+        {
+            "file": "input/wine-white.csv",
+            "separator": ";",
+            "class-index": 11
+        },
+        {
+            "file": "input/wine-red.csv",
+            "separator": ";",
+            "class-index": 11
+        }
+    ]
+    return files
+
+def runOptions():
+    print "\n\n-------------- Cinnabar! --------------\n\n"
+    files = fileArguments()
+
+    output = []
+    output.append(["ID", "Arquivo"])
+    for index in range(0, len(files)):
+        output.append([" " + str(index + 1), files[index]["file"]])
+
+    while True:
+        printTable(output)
+        fileId = input("Escolha o ID de um dos arquivos: ")
+
+        if fileId > 0 and fileId <= len(files):
+            break
+        else:
+            print ("ID inexistente.\n\n")
+
+
+    return files[fileId - 1]

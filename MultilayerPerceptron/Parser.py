@@ -17,6 +17,8 @@ class CSV(object):
         #linhas vazias sao descartadas
         lines = [line for line in lines if line.strip() != ""]
 
+        # TODO: embaralhar as linhas
+        
         headerLine = lines.pop(0)
         headerFields = headerLine.split(separator)
         classesLabel = dict()
