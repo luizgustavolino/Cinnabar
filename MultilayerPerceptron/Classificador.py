@@ -28,8 +28,9 @@ class kFold(object):
 
         # dryRun = true -> roda somente uma vez, para testes
         self.dryRun = False
+        foldLimit   = k
 
-        for foldNum in range(0,k):
+        for foldNum in range(0, foldLimit):
 
             if self.multithreadingEnabled == True and self.dryRun != True:
                 p = multiprocessing.Process(target=self.runMLP, args=(foldNum,))
@@ -62,7 +63,7 @@ class kFold(object):
             rateOfError         = 1
 
             # 1 passo: treinamento do MLP
-            while(rateOfError > threshold or lastEAv > 0.15):
+            while((rateOfError > threshold or lastEAv > 0.25) and numberOfTeachings < 30):
 
                 numberOfTeachings += 1
                 for sampleIndex in sample["S"]:
@@ -98,7 +99,6 @@ class kFold(object):
         for aClass in self.csv.responseClasses():
             if aClass == expectedClass: responseVector.append(1)
             else: responseVector.append(0)
-        #print "Expected " + str(responseVector) + " : " + str(expectedClass)
         return responseVector
 
     def mlpLayouts(self, attributesCount):
@@ -107,7 +107,7 @@ class kFold(object):
         # a) [3,  6,6, 2 ]
         # b) [3,  6,6,6, 2]
         # c) .. vetor de vetores
-        return [[attributesCount,attributesCount,attributesCount,attributesCount,3]]
+        return [[attributesCount,attributesCount,attributesCount,3]]
 
     def makeSample(self, iter):
         lower = iter*self.foldSize

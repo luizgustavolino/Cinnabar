@@ -19,6 +19,7 @@ class MLP (object):
         self.instantErrorLog    = [] # Lista de erros instantâneos para cada forward de learning
         self.learningRate       = 0.1 # ƞ
         self.a                  = 1.0 #
+        self.momentum           = 0.5
 
         layersCount  = len(layout)
 
@@ -35,7 +36,7 @@ class MLP (object):
                 elif i < layersCount:
                     #print "Criando neuronio "+str(j)+" da layer "+str(i)
                     tag = "hl"+str(i)+"n"+str(j)
-                    hlNeuron = Neuron(tag, self.a, self.learningRate)
+                    hlNeuron = Neuron(tag, self.a, self.learningRate, self.momentum)
                     currentLayer.append(hlNeuron)
                     if i == layersCount -1:
                         hlNeuron.insideOutputLayer = True
@@ -161,7 +162,7 @@ class Output (object):
 
 class Neuron (object):
 
-    def __init__(self, tag, a, learningRate):
+    def __init__(self, tag, a, learningRate, momentum):
         # cria um neuronio, que tera sinapses
         # de entrada e saida
         self.tag                = tag
@@ -173,6 +174,7 @@ class Neuron (object):
         self.a                  = a
         self.learningRate       = learningRate
         self.insideOutputLayer  = False
+        self.momentum           = momentum
 
     def receiveSignal(self, signalValue, fromTag):
 
@@ -200,7 +202,6 @@ class Neuron (object):
         # gerada pelas sinapses de entrada
         self.accumulatedWeight = 0.0
         self.signalsReceived   = 0
-        self.currentOutput     = 0.0
 
     def sigmoid(self):
         # na literatura, yj(n) = φj(vj(n))
@@ -216,7 +217,9 @@ class Neuron (object):
         # hidden & output: Δwji(n) = ƞ * localGrad * φi(vi(n))
         for inputSynapse in self.synapsesIn:
             fi_i = inputSynapse.source.sigmoid()
-            inputSynapse.weight += self.learningRate * self.localGrad() * fi_i
+            a = 0 #self.momentum * inputSynapse.lastWeight
+            inputSynapse.lastWeight = inputSynapse.weight
+            inputSynapse.weight = inputSynapse.weight + a + self.learningRate * self.localGrad() * fi_i
 
     def localGrad(self):
 
@@ -236,9 +239,10 @@ class Synapse (object):
     def __init__(self, source, destiny):
         # cria uma sinapse, que tem um neuronio
         # de entrada e um de saida
-        self.source = source
-        self.destiny = destiny
-        self.weight = random.uniform(-1,1)
+        self.source     = source
+        self.destiny    = destiny
+        self.lastWeight = 0
+        self.weight     = random.uniform(-1,1)
 
     def signal(self,input):
         # recebe um estimulo e repassa
@@ -252,6 +256,7 @@ class Bias (object):
         # 1 como entrada
         self.destiny = destiny
         self.source = self
+        self.lastWeight = 0
         self.weight = random.uniform(-1,1)
         self.accumulatedWeight = self.weight
 
