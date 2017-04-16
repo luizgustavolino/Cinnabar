@@ -17,6 +17,7 @@ class MLP (object):
 
         self.n                  = 0  # Contagem de forwards, com learning
         self.instantErrorLog    = [] # Lista de erros instantâneos para cada forward de learning
+        self.outputErrorLog     = [] # Lista dos erros no output (esperado)
         self.learningRate       = 0.1 # ƞ
         self.a                  = 1.0 #
         self.momentum           = 0.5
@@ -78,15 +79,16 @@ class MLP (object):
 
         if learningMode == True:
 
+            # Iniciando passo backward
             self.instantErrorLog.append(self.instantaneousErrorEnergy())
             self.n += 1
 
-            # Iniciando passo backward
+            # Aplicando correção nas sinapses da layer: i
             for i,layer in enumerate(reversed(self.layers[1:])):
-                # Aplicando correção nas sinapses da layer: i
                 for neuron in layer: neuron.weightFix()
         else:
 
+            self.outputErrorLog.append(self.outputError())
             currentClass        = -1
             currentClassValue   = -1
 
@@ -100,6 +102,8 @@ class MLP (object):
                     if i == currentClass: return True
                     else: return False
 
+    ### Calculo dos erros ###
+
     def instantaneousErrorEnergy(self):
         #  ℰ(n) = (1/2) Σ(ej(n))^2
         total = 0
@@ -110,7 +114,22 @@ class MLP (object):
         # ℰav = (1/N) Σ ℰ(n)
         result = 0
         for instant in self.instantErrorLog: result += instant
-        return result * (1.0/len(self.instantErrorLog))
+        return result / len(self.instantErrorLog)
+
+    def meanAbsoluteError(self):
+        result = 0
+        for error in self.outputErrorLog: result += abs(error)
+        return result / len(self.outputErrorLog)
+
+    def rootMeanSquareDeviation(self):
+        result = 0
+        for error in self.outputErrorLog: result += error * error
+        return math.sqrt(result / len(self.outputErrorLog))
+
+    def outputError(self):
+        for output in self.outputs:
+            if output.expectedValue == 1:
+                return output.error
 
 class Input (object):
 
@@ -213,13 +232,16 @@ class Neuron (object):
         return self.a * self.currentOutput * (1.0 - self.currentOutput)
 
     def weightFix(self):
+
         # para cada sinapse de input
-        # hidden & output: Δwji(n) = ƞ * localGrad * φi(vi(n))
+        # a = Δwji(n-1) * momentum
+        # hidden & output: Δwji(n) = ƞ * localGrad * φi(vi(n)) + a
         for inputSynapse in self.synapsesIn:
             fi_i = inputSynapse.source.sigmoid()
-            a = 0 #self.momentum * inputSynapse.lastWeight
-            inputSynapse.lastWeight = inputSynapse.weight
-            inputSynapse.weight = inputSynapse.weight + a + self.learningRate * self.localGrad() * fi_i
+            a = self.momentum * inputSynapse.lastDelta
+            deltaw = self.learningRate * self.localGrad() * fi_i
+            inputSynapse.weight = inputSynapse.weight + a + deltaw
+            inputSynapse.lastDelta = deltaw
 
     def localGrad(self):
 
@@ -241,7 +263,7 @@ class Synapse (object):
         # de entrada e um de saida
         self.source     = source
         self.destiny    = destiny
-        self.lastWeight = 0
+        self.lastDelta  = 0
         self.weight     = random.uniform(-1,1)
 
     def signal(self,input):
@@ -256,7 +278,7 @@ class Bias (object):
         # 1 como entrada
         self.destiny = destiny
         self.source = self
-        self.lastWeight = 0
+        self.lastDelta = 0
         self.weight = random.uniform(-1,1)
         self.accumulatedWeight = self.weight
 
