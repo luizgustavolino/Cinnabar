@@ -17,7 +17,7 @@ class MLP (object):
 
         self.n                  = 0  # Contagem de forwards, com learning
         self.instantErrorLog    = [] # Lista de erros instantâneos para cada forward de learning
-        self.learningRate       = 0.01 # ƞ
+        self.learningRate       = 0.1 # ƞ
         self.a                  = 1.0  #
 
         layersCount  = len(layout)
@@ -31,11 +31,13 @@ class MLP (object):
                     #print "Criando neuronio "+str(j)+" da input layer"
                     tag = "iln"+str(j)
                     currentLayer.append(Input(tag))
+
                 elif i < layersCount:
                     #print "Criando neuronio "+str(j)+" da layer "+str(i)
                     tag = "hl"+str(i)+"n"+str(j)
                     hlNeuron = Neuron(tag, self.a, self.learningRate)
                     currentLayer.append(hlNeuron)
+                    if i == layersCount -1: hlNeuron.insideOutputLayer = True
 
             self.layers.append(currentLayer)
 
@@ -61,6 +63,10 @@ class MLP (object):
         for i, output in enumerate(self.outputs):
             output.expectedValue = expectedOutputs[i]
 
+        # Prepara os neuronios para um novo forward
+        for layer in self.layers:
+            for neuron in layer: neuron.warmUp()
+
         # Avisa as sinapses de entrada e,
         # após os eventos em cascata, colhe a saida
         print "-------------------------"
@@ -79,7 +85,8 @@ class MLP (object):
             print "Iniciando passo backward"
             print "-------------------------"
 
-            for layer in reversed(self.layers[2:]):
+            for i,layer in enumerate(reversed(self.layers[2:])):
+                print("Aplicando correção nas sinapses da layer " + str(i))
                 for neuron in layer:
                     neuron.weightFix()
 
@@ -105,6 +112,9 @@ class Input (object):
         self.tag         = tag
         self.synapsesOut = []
 
+    def warmUp(self):
+        pass
+
     def receiveSignal(self, signalValue):
         # a input layer não tem somatório de valores
         # ela recebe de uma fonte somente, então para já ativar
@@ -127,11 +137,6 @@ class Output (object):
         self.expectedValue  = None  #dj(n)
         self.error          = 0     #ej(n)
 
-    def grad(self):
-        # ∂ output: ej(n) * φ'j(vj(n))
-        d_fi = self.source.sigmoidDerivative( self.source.accumulatedWeight )
-        return self.error * d_fi
-
     def signal(self, signalValue):
         # na literatura:  ej(n) = dj(n)-yj(n)
         self.error = self.expectedValue - signalValue
@@ -152,6 +157,7 @@ class Neuron (object):
         self.synapsesOut        = []
         self.a                  = a
         self.learningRate       = learningRate
+        self.insideOutputLayer  = False
 
     def receiveSignal(self, signalValue, fromTag):
 
@@ -174,10 +180,14 @@ class Neuron (object):
 
             #print("# " + self.tag + " saturado com sigmoid " + str(sigmoidData))
             for synapse in self.synapsesOut: synapse.signal(sigmoidData)
-
             self.currentOutput     = sigmoidData
-            self.accumulatedWeight = 0
-            self.signalsReceived   = 0
+
+    def warmUp(self):
+        # Chamado antes de um forward para zerar a saturação
+        # gerada pelas sinapses de entrada
+        self.accumulatedWeight = 0
+        self.signalsReceived   = 0
+        self.currentOutput     = 0
 
     def sigmoid(self):
         # na literatura, yj(n) = φj(vj(n))
@@ -193,15 +203,20 @@ class Neuron (object):
         # hidden & output: Δwji(n) = ƞ * localGrad * φi(vi(n))
         for inputSynapse in self.synapsesIn:
             fi_i = inputSynapse.source.sigmoid()
-            inputSynapse.weight = self.learningRate * self.localGrad() * fi_i
+            inputSynapse.weight += self.learningRate * self.localGrad() * fi_i
 
     def localGrad(self):
-        grad = 0
-        for outputSynapse in self.synapsesOut:
-            pass
-        # ∂ hidden: φ'j(vj(n)) * Σ localGradk(n) * wkj(n)
+
         # ∂ output: ej(n) * φ'j(vj(n))
-        return 1
+        if self.insideOutputLayer:
+            return self.synapsesOut[0].error * self.sigmoidDerivative()
+
+        # ∂ hidden: φ'j(vj(n)) * Σ(localGradk(n) * wkj(n))
+        else:
+            sum_grads = 0
+            for out in self.synapsesOut:
+                sum_grads += out.destiny.localGrad() * out.weight
+            return self.sigmoidDerivative() * sum_grads
 
 class Synapse (object):
 

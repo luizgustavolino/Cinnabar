@@ -78,7 +78,7 @@ class kFold(object):
 
     def mlpLayouts(self, attributesCount):
         # TODO: pedir ajuda do hideki
-        return [[attributesCount,4,3]]
+        return [[attributesCount,4,4,3]]
 
     def makeSample(self, iter):
         lower = iter*self.foldSize
