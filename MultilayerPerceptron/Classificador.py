@@ -22,120 +22,118 @@ class kFold(object):
         print " Considerando como class a coluna: " + self.csv.className + " (M="+str(classesCount)+")"
         print "--------------------------------------------------"
 
-        # multithreadingEnabled = true -> processa folds em threads
-        self.multithreadingEnabled = True
-        processPool     = []
-        responseQueue   = multiprocessing.Queue()
+        layouts = self.mlpLayouts()
+        for layout in layouts:
 
-        # Sums
-        self.sumOfRootDeviantion    = 0
-        self.sumOfMeanAbs           = 0
-        self.sumOfSucessRate        = 0
+            # multithreadingEnabled = true -> processa folds em threads
+            self.multithreadingEnabled = True
+            processPool     = []
+            responseQueue   = multiprocessing.Queue()
 
-        # dryRun = true -> roda somente uma vez, para testes
-        self.dryRun = False
-        foldLimit   = k
+            # Sums
+            self.sumOfRootDeviantion    = 0
+            self.sumOfMeanAbs           = 0
+            self.sumOfSucessRate        = 0
+            self.numberOfTeachings      = 0
 
-        for foldNum in range(0, foldLimit):
+            # dryRun = true -> roda somente uma vez, para testes
+            self.dryRun = False
+            foldLimit   = 2
+            print "[ Considerando "+str(foldLimit)+" folds ]"
 
-            if self.multithreadingEnabled == True and self.dryRun != True:
-                p = multiprocessing.Process(
-                    target=self.runMLP,
-                    args=(foldNum,responseQueue,))
-                processPool.append(p)
-            else:
-                self.runMLP(foldNum, responseQueue)
-                if self.dryRun: return
+            for foldNum in range(0, foldLimit):
 
-        if self.multithreadingEnabled:
-            for p in processPool: p.start()
-            for p in processPool: p.join()
+                if self.multithreadingEnabled == True and self.dryRun != True:
+                    p = multiprocessing.Process(
+                        target=self.runMLP,
+                        args=(foldNum,layout,responseQueue,))
+                    processPool.append(p)
+                else:
+                    self.runMLP(foldNum, responseQueue)
+                    if self.dryRun: return
 
-        while responseQueue.empty() == False :
-            aResponse = responseQueue.get()
-            self.sumOfRootDeviantion += aResponse["SDev"]
-            self.sumOfMeanAbs        += aResponse["MAbs"]
-            self.sumOfSucessRate     += aResponse["SucR"]
+            if self.multithreadingEnabled:
+                for p in processPool: p.start()
+                for p in processPool: p.join()
 
-        log  = str(foldLimit) + "-Folds ended, results:"
-        log += " mean-abs-error: " + str(round(self.sumOfMeanAbs/foldLimit, 3))
-        log += " root-mean-square-deviation: " + str(round(self.sumOfRootDeviantion/foldLimit, 3))
-        log += " success-rate: " + str(round(self.sumOfSucessRate/foldLimit, 3))
+            while responseQueue.empty() == False :
+                aResponse = responseQueue.get()
+                self.sumOfRootDeviantion += aResponse["SDev"]
+                self.sumOfMeanAbs        += aResponse["MAbs"]
+                self.sumOfSucessRate     += aResponse["SucR"]
+                self.numberOfTeachings    = aResponse["Teac"]
 
-        print(log)
+            log  = str(layout)
+            log += " mean-abs-error: " + str(round(self.sumOfMeanAbs/foldLimit, 3))
+            log += " root-mean-square-deviation: " + str(round(self.sumOfRootDeviantion/foldLimit, 3))
+            log += " success-rate: " + str(round(self.sumOfSucessRate/foldLimit, 3))
+            log += " loops: " + str(self.numberOfTeachings)
 
-    def runMLP(self, foldNum, responseQueue):
+            print(log)
+
+    def runMLP(self, foldNum, layout, responseQueue):
 
         sample = self.makeSample(foldNum)
 
-        # TODO: montar layouts segundo o enunciado
-        attributesCount = len(self.csv.headers)-1
-        layouts = self.mlpLayouts(attributesCount)
+        mlp                 = MLP(layout)
+        lastEAv             = None
+        threshold           = 0.001
+        numberOfTeachings   = 0
+        rateOfError         = 1
+        maxTeachings        = 150
+        minTeachings        = 20
 
-        for layout in layouts:
+        # ### Treinamento do MLP ###
+        # Parada 1: taxa de erro menor que o gatilho
+        # Parada 2: taxa de erro menor que 15%
+        # Parada 3: atingiu o max de treinamentos
+        while (rateOfError > threshold or lastEAv > 0.15) and numberOfTeachings < maxTeachings:
 
-            mlp                 = MLP(layout)
-            lastEAv             = None
-            threshold           = 0.001
-            numberOfTeachings   = 0
-            rateOfError         = 1
-            maxTeachings        = 150
-            minTeachings        = 20
+            numberOfTeachings += 1
+            for sampleIndex in sample["S"]:
 
-            # 1 passo: treinamento do MLP
-            while((
-                # Parada 1: taxa de erro menor que o gatilho
-                # Parada 2: taxa de erro menor que 15%
-                # Parada 3: atingiu o max de treinamentos
-                rateOfError > threshold
-                or lastEAv > 0.15 )
-            ):
-
-                numberOfTeachings += 1
-                for sampleIndex in sample["S"]:
-
-                    currentInstance = self.csv.getLine(sampleIndex)
-                    instanceClass = currentInstance.pop(self.csv.classIndex)
-                    mlp.forward(currentInstance, self.mlpExpectedVector(instanceClass))
-
-                    if self.dryRun: break # dryrun roda uma vez só
-
-                eAV = mlp.averageSquaredErrorEnergy()
-                if lastEAv != None: rateOfError = lastEAv - eAV
-                lastEAv = eAV
-
-            log  = "MLP-k" + str(foldNum) + " ready!"
-            log += " mean-error: " + str(round(lastEAv,3))
-            log += ", delta = "+str(round(rateOfError,5))
-            log += " after "+str(numberOfTeachings)+" loops"
-            print(log)
-
-            # Classificação
-            instanceTested  = 0.0
-            succesCount     = 0.0
-
-            for sampleIndex in sample["T"]:
                 currentInstance = self.csv.getLine(sampleIndex)
                 instanceClass = currentInstance.pop(self.csv.classIndex)
-                success = mlp.forward(currentInstance, self.mlpExpectedVector(instanceClass), False)
-                if success == True: succesCount += 1
-                instanceTested += 1
+                mlp.forward(currentInstance, self.mlpExpectedVector(instanceClass))
 
-            self.sumOfSucessRate        += succesCount/instanceTested
-            self.sumOfRootDeviantion    += mlp.rootMeanSquareDeviation()
-            self.sumOfMeanAbs           += mlp.meanAbsoluteError()
+                if self.dryRun: break # dryrun roda uma vez só
 
-            respose = {
-                'SucR': succesCount/instanceTested,
-                'SDev': mlp.rootMeanSquareDeviation(),
-                'MAbs': mlp.meanAbsoluteError()
-            }
+            eAV = mlp.averageSquaredErrorEnergy()
+            if lastEAv != None: rateOfError = lastEAv - eAV
+            lastEAv = eAV
 
-            responseQueue.put(respose)
+        log  = "MLP-k" + str(foldNum) + " ready!"
+        log += " mean-error: " + str(round(lastEAv,3))
+        log += ", delta = "+str(round(rateOfError,5))
+        log += " after "+str(numberOfTeachings)+" loops"
+        #print(log)
 
-            log  = "MLP-k" + str(foldNum)
-            log += " results: success-rate at " + str(int(100*succesCount/instanceTested)) + " %"
-            print(log)
+        # Classificação
+        instanceTested  = 0.0
+        succesCount     = 0.0
+
+        for sampleIndex in sample["T"]:
+            currentInstance = self.csv.getLine(sampleIndex)
+            instanceClass = currentInstance.pop(self.csv.classIndex)
+            success = mlp.forward(currentInstance, self.mlpExpectedVector(instanceClass), False)
+            if success == True: succesCount += 1
+            instanceTested += 1
+
+        self.sumOfSucessRate        += succesCount/instanceTested
+        self.sumOfRootDeviantion    += mlp.rootMeanSquareDeviation()
+        self.sumOfMeanAbs           += mlp.meanAbsoluteError()
+
+        respose = {
+            'SucR': succesCount/instanceTested,
+            'SDev': mlp.rootMeanSquareDeviation(),
+            'MAbs': mlp.meanAbsoluteError(),
+            'Teac': numberOfTeachings
+        }
+
+        responseQueue.put(respose)
+        log  = "MLP-k" + str(foldNum)
+        log += " results: success-rate at " + str(int(100*succesCount/instanceTested)) + " %"
+        #print(log)
 
     # instancia tem classe 3 -> [0,0,1]
     def mlpExpectedVector(self, expectedClass):
@@ -145,14 +143,30 @@ class kFold(object):
             else: responseVector.append(0)
         return responseVector
 
-    def mlpLayouts(self, attributesCount):
-        # TODO: pedir ajuda do hideki
-        # [ attributesCount, willian passou(x hidden de x neuronios), count(classes) ]
-        # a) [3,  6,6, 2 ]
-        # b) [3,  6,6,6, 2]
-        # c) .. vetor de vetores
-        classes = len(self.csv.responseClasses())
-        return [[attributesCount,attributesCount,attributesCount,classes]]
+    def mlpLayouts(self):
+
+        inputs      = len(self.csv.headers)-1
+        outputs     = len(self.csv.responseClasses())
+        layout      = []
+        layoutGroup = []
+        qMax = max(inputs, outputs)
+
+        for i in xrange(1,4):
+
+            if i == 1: n = int(qMax * 0.5)
+            if i == 2: n = int(qMax)
+            if i == 3: n = int(qMax * 2)
+
+            for j in xrange(1,3):
+                layout.append(inputs)
+                if j == 2: layout.append(n)
+                layout.append(n)
+                layout.append(n)
+                layout.append(outputs)
+                layoutGroup.append(layout)
+                layout = []
+
+        return layoutGroup
 
     def makeSample(self, iter):
         lower = iter*self.foldSize

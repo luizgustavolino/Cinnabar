@@ -10,7 +10,7 @@ class MLP (object):
         # cria uma rede MLP seguindo a quantidade
         # de neuronios do layout (vetor de ints)
 
-        print "Criando MLP, layout:" + str(layout)
+        #print "Criando MLP, layout:" + str(layout)
 
         self.layers  = [] # layers[0]  -> input layer, demais são hidden layers
         self.outputs = []
