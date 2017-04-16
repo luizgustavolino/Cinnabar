@@ -5,6 +5,7 @@ import operator
 import Helpers
 import multiprocessing
 from MLP import MLP
+import time
 
 class kFold(object):
 
@@ -22,6 +23,14 @@ class kFold(object):
         print " Considerando como class a coluna: " + self.csv.className + " (M="+str(classesCount)+")"
         print "--------------------------------------------------"
 
+        foldLimit = k
+        print "[ Considerando "+str(foldLimit)+" folds ]"
+
+        bestLayout          = None
+        bestSuccessRate     = 0
+        bestLoopsCounts     = 0
+        bestElapsedTime     = 0
+
         layouts = self.mlpLayouts()
         for layout in layouts:
 
@@ -35,18 +44,18 @@ class kFold(object):
             self.sumOfMeanAbs           = 0
             self.sumOfSucessRate        = 0
             self.numberOfTeachings      = 0
+            self.bestLayoutMomentum     = 0.0
 
             # dryRun = true -> roda somente uma vez, para testes
             self.dryRun = False
-            foldLimit   = 2
-            print "[ Considerando "+str(foldLimit)+" folds ]"
+            start_time = time.time()
 
             for foldNum in range(0, foldLimit):
 
                 if self.multithreadingEnabled == True and self.dryRun != True:
                     p = multiprocessing.Process(
                         target=self.runMLP,
-                        args=(foldNum,layout,responseQueue,))
+                        args=(foldNum, layout, self.bestLayoutMomentum, responseQueue,))
                     processPool.append(p)
                 else:
                     self.runMLP(foldNum, responseQueue)
@@ -61,21 +70,75 @@ class kFold(object):
                 self.sumOfRootDeviantion += aResponse["SDev"]
                 self.sumOfMeanAbs        += aResponse["MAbs"]
                 self.sumOfSucessRate     += aResponse["SucR"]
-                self.numberOfTeachings    = aResponse["Teac"]
+                self.numberOfTeachings   += aResponse["Teac"]
+
+            successRate = self.sumOfSucessRate/foldLimit
+            loops       = int(self.numberOfTeachings/foldLimit)
+            elapsed     = time.time() - start_time
 
             log  = str(layout)
-            log += " mean-abs-error: " + str(round(self.sumOfMeanAbs/foldLimit, 3))
-            log += " root-mean-square-deviation: " + str(round(self.sumOfRootDeviantion/foldLimit, 3))
-            log += " success-rate: " + str(round(self.sumOfSucessRate/foldLimit, 3))
-            log += " loops: " + str(self.numberOfTeachings)
+            log += " mean-abs: " + str(round(self.sumOfMeanAbs/foldLimit, 3))
+            log += " square-deviation: " + str(round(self.sumOfRootDeviantion/foldLimit, 3))
+            log += " success: " + str(round(successRate, 3))
+            log += " loops: " + str(loops)
+            log += " elapsed time: " + str(round(elapsed,1)) + "s "
+
+            useThisAsBestLayout = False
+            if successRate > bestSuccessRate:
+                useThisAsBestLayout = True
+            elif successRate == bestSuccessRate:
+                if loops < bestLoopsCounts:
+                     useThisAsBestLayout = True
+                elif loops == bestLoopsCounts:
+                    if elapsed < bestElapsedTime:
+                        useThisAsBestLayout = True
+
+            if useThisAsBestLayout == True:
+                bestSuccessRate = successRate
+                bestLayout      = layout
+                bestLoopsCounts = loops
+                bestElapsedTime = elapsed
 
             print(log)
 
-    def runMLP(self, foldNum, layout, responseQueue):
+        print "Best layout: " + str(bestLayout)
+
+        ## Validação de melhor a
+        for aMomentum in [0.0, 0.25, 0.5, 0.75, 0.9]:
+
+            # Sums
+            self.sumOfRootDeviantion    = 0
+            self.sumOfMeanAbs           = 0
+            self.sumOfSucessRate        = 0
+            self.numberOfTeachings      = 0
+            self.bestLayoutMomentum     = 0.0
+
+            processPool     = []
+            responseQueue   = multiprocessing.Queue()
+
+            for foldNum in range(0, foldLimit):
+                p = multiprocessing.Process(
+                        target=self.runMLP,
+                        args=(foldNum, bestLayout, aMomentum, responseQueue,))
+                processPool.append(p)
+
+            for p in processPool: p.start()
+            for p in processPool: p.join()
+
+            while responseQueue.empty() == False :
+                aResponse = responseQueue.get()
+                self.sumOfSucessRate     += aResponse["SucR"]
+                self.numberOfTeachings   += aResponse["Teac"]
+
+            loops = int(self.numberOfTeachings/foldLimit)
+            successRate = str(round(self.sumOfSucessRate/foldLimit, 3)) + "%"
+            print "Para momentum = "+ str(round(aMomentum,2)) +", loops: " + str(loops) + ", success: " + successRate
+
+    def runMLP(self, foldNum, layout, momentum, responseQueue):
 
         sample = self.makeSample(foldNum)
 
-        mlp                 = MLP(layout)
+        mlp                 = MLP(layout, momentum)
         lastEAv             = None
         threshold           = 0.001
         numberOfTeachings   = 0
@@ -102,12 +165,6 @@ class kFold(object):
             if lastEAv != None: rateOfError = lastEAv - eAV
             lastEAv = eAV
 
-        log  = "MLP-k" + str(foldNum) + " ready!"
-        log += " mean-error: " + str(round(lastEAv,3))
-        log += ", delta = "+str(round(rateOfError,5))
-        log += " after "+str(numberOfTeachings)+" loops"
-        #print(log)
-
         # Classificação
         instanceTested  = 0.0
         succesCount     = 0.0
@@ -131,9 +188,6 @@ class kFold(object):
         }
 
         responseQueue.put(respose)
-        log  = "MLP-k" + str(foldNum)
-        log += " results: success-rate at " + str(int(100*succesCount/instanceTested)) + " %"
-        #print(log)
 
     # instancia tem classe 3 -> [0,0,1]
     def mlpExpectedVector(self, expectedClass):

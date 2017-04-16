@@ -6,7 +6,7 @@ import math
 
 class MLP (object):
 
-    def __init__(self, layout):
+    def __init__(self, layout, momentum):
         # cria uma rede MLP seguindo a quantidade
         # de neuronios do layout (vetor de ints)
 
@@ -20,7 +20,7 @@ class MLP (object):
         self.outputErrorLog     = [] # Lista dos erros no output (esperado)
         self.learningRate       = 0.1 # ƞ
         self.a                  = 1.0 #
-        self.momentum           = 0.5
+        self.momentum           = momentum
 
         layersCount  = len(layout)
 

@@ -3,7 +3,6 @@
 import Helpers
 import Parser
 import Classificador
-import time
 
 # inicio do fluxo do programa
 # run options retornara os parametros do arquivo escolhido
@@ -24,8 +23,4 @@ else:
     finalFileName = args['file'].replace(".csv", ".norm.csv")
 
 csv.writeNormalized(finalFileName, args['separator'])
-
-start_time = time.time()
 Classificador.kFold(csv, 10)
-elapsed_time = time.time() - start_time
-print "Elapsed time: " + str(elapsed_time)
