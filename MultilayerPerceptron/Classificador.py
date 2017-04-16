@@ -107,7 +107,7 @@ class kFold(object):
         # a) [3,  6,6, 2 ]
         # b) [3,  6,6,6, 2]
         # c) .. vetor de vetores
-        return [[attributesCount,attributesCount*2,attributesCount*2,3]]
+        return [[attributesCount,attributesCount,attributesCount,attributesCount,3]]
 
     def makeSample(self, iter):
         lower = iter*self.foldSize
