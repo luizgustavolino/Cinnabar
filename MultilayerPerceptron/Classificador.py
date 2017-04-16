@@ -96,8 +96,8 @@ class kFold(object):
     def mlpExpectedVector(self, expectedClass):
         responseVector = []
         for aClass in self.csv.responseClasses():
-            if aClass == expectedClass: responseVector.append(1.0)
-            else: responseVector.append(0.0)
+            if aClass == expectedClass: responseVector.append(1)
+            else: responseVector.append(0)
         #print "Expected " + str(responseVector) + " : " + str(expectedClass)
         return responseVector
 

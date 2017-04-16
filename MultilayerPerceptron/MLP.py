@@ -130,8 +130,8 @@ class Input (object):
 
     def sigmoid(self):
         # na literatura, yj(n) = φj(vj(n))
-        sigmoidValue = 1.0 / (1.0 + math.exp(self.accumulatedWeight * -1))
-        if sigmoidValue > 1.0 or sigmoidValue < 0.0: raise NameError('INVALID SIGMOID VALUE')
+        sigmoidValue = 1 / (1+math.exp(self.accumulatedWeight * -1))
+        if sigmoidValue > 1 or sigmoidValue < 0: raise NameError('INVALID SIGMOID VALUE')
         return sigmoidValue
 
     def receiveSignal(self, signalValue):
@@ -154,9 +154,9 @@ class Output (object):
 
         # Cada passo forward ajusta o expectedValue
         # para evitar confusão, será inicializado com None
-        self.expectedValue      = None  #dj(n)
-        self.lastSignal         = 0.0
-        self.error              = 0.0     #ej(n)
+        self.expectedValue  = None  #dj(n)
+        self.lastSignal         = 0
+        self.error          = 0     #ej(n)
 
     def signal(self, signalValue):
         # na literatura:  ej(n) = dj(n)-yj(n)
@@ -204,9 +204,9 @@ class Neuron (object):
     def warmUp(self):
         # Chamado antes de um forward para zerar a saturação
         # gerada pelas sinapses de entrada
-        self.accumulatedWeight = 0.0
-        self.signalsReceived   = 0.0
-        self.currentOutput     = 0.0
+        self.accumulatedWeight = 0
+        self.signalsReceived   = 0
+        self.currentOutput     = 0
 
     def sigmoid(self):
         # na literatura, yj(n) = φj(vj(n))
