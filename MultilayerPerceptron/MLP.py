@@ -70,9 +70,7 @@ class MLP (object):
 
         # Avisa as sinapses de entrada e,
         # após os eventos em cascata, colhe a saida
-        #print "-------------------------"
-        #print "Iniciando passo forward"
-        #print "-------------------------"
+        # Iniciando passo forward
 
         for (j, inputNode) in enumerate(self.layers[0]):
             inputNode.receiveSignal(inputs[j])
@@ -82,13 +80,28 @@ class MLP (object):
             self.instantErrorLog.append(self.instantaneousErrorEnergy())
             self.n += 1
 
-            #print "-------------------------"
-            #print "Iniciando passo backward"
-            #print "-------------------------"
-
+            # Iniciando passo backward
             for i,layer in enumerate(reversed(self.layers[1:])):
-                #print("Aplicando correção nas sinapses da layer " + str(i))
+                # Aplicando correção nas sinapses da layer: i
                 for neuron in layer: neuron.weightFix()
+        else:
+
+            currentClass        = -1
+            currentClassValue   = -1
+
+            for i, output in enumerate(self.outputs):
+                if output.lastSignal > currentClassValue:
+                    currentClass        = i
+                    currentClassValue   = output.lastSignal
+
+            for i, expected in enumerate(expectedOutputs):
+                if expected == 1:
+                    if i == currentClass:
+                        #print("[acerto] esperado "+str(i)+" encontrado "+str(currentClass))
+                        return True
+                    else:
+                        #print("[erro] esperado "+str(i)+" encontrado "+str(currentClass))
+                        return False
 
     def instantaneousErrorEnergy(self):
         #  ℰ(n) = (1/2) Σ(ej(n))^2
@@ -101,7 +114,6 @@ class MLP (object):
         result = 0
         for instant in self.instantErrorLog: result += instant
         return result * (1.0/len(self.instantErrorLog))
-
 
 class Input (object):
 
@@ -118,8 +130,8 @@ class Input (object):
 
     def sigmoid(self):
         # na literatura, yj(n) = φj(vj(n))
-        sigmoidValue = 1 / (1+math.exp(self.accumulatedWeight * -1))
-        if sigmoidValue > 1 or sigmoidValue < 0: raise NameError('INVALID SIGMOID VALUE')
+        sigmoidValue = 1.0 / (1.0 + math.exp(self.accumulatedWeight * -1))
+        if sigmoidValue > 1.0 or sigmoidValue < 0.0: raise NameError('INVALID SIGMOID VALUE')
         return sigmoidValue
 
     def receiveSignal(self, signalValue):
@@ -142,15 +154,14 @@ class Output (object):
 
         # Cada passo forward ajusta o expectedValue
         # para evitar confusão, será inicializado com None
-        self.expectedValue  = None  #dj(n)
-        self.error          = 0     #ej(n)
+        self.expectedValue      = None  #dj(n)
+        self.lastSignal         = 0.0
+        self.error              = 0.0     #ej(n)
 
     def signal(self, signalValue):
         # na literatura:  ej(n) = dj(n)-yj(n)
-        self.error = self.expectedValue - signalValue
-        #print("Output: " + str(signalValue)
-        #      + " (expected:"+str(self.expectedValue)
-        #      + ", error: "+str(self.error)+")")
+        self.error  = self.expectedValue - signalValue
+        self.lastSignal = signalValue
 
 class Neuron (object):
 
@@ -193,9 +204,9 @@ class Neuron (object):
     def warmUp(self):
         # Chamado antes de um forward para zerar a saturação
         # gerada pelas sinapses de entrada
-        self.accumulatedWeight = 0
-        self.signalsReceived   = 0
-        self.currentOutput     = 0
+        self.accumulatedWeight = 0.0
+        self.signalsReceived   = 0.0
+        self.currentOutput     = 0.0
 
     def sigmoid(self):
         # na literatura, yj(n) = φj(vj(n))

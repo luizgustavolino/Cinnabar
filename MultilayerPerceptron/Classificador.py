@@ -45,9 +45,9 @@ class kFold(object):
     def runMLP(self, foldNum):
 
         sample = self.makeSample(foldNum)
-        print "\n: kFold num.: " + str(foldNum)
-        print "................................................."
-        print ": Testando instâncias de " + str(sample["T"][0]) + " até " + str(sample["T"][-1])
+        #print "\n: kFold num.: " + str(foldNum)
+        #print "................................................."
+        #print ": Testando instâncias de " + str(sample["T"][0]) + " até " + str(sample["T"][-1])
 
         # TODO: montar layouts segundo o enunciado
         attributesCount = len(self.csv.headers)-1
@@ -55,10 +55,16 @@ class kFold(object):
 
         for layout in layouts:
 
-            mlp = MLP(layout)
+            mlp                 = MLP(layout)
+            lastEAv             = None
+            threshold           = 0.001
+            numberOfTeachings   = 0
+            rateOfError         = 1
 
             # 1 passo: treinamento do MLP
-            for i in range(0,20):
+            while(rateOfError > threshold or lastEAv > 0.15):
+
+                numberOfTeachings += 1
                 for sampleIndex in sample["S"]:
 
                     currentInstance = self.csv.getLine(sampleIndex)
@@ -67,15 +73,31 @@ class kFold(object):
 
                     if self.dryRun: break # dryrun roda uma vez só
 
-                    # TODO: 2 passo: classificação
-                print "Fold "+str(foldNum)+" run "+str(i)+" Av Error: " + str(mlp.averageSquaredErrorEnergy())
+                eAV = mlp.averageSquaredErrorEnergy()
+                if lastEAv != None: rateOfError = lastEAv - eAV
+                lastEAv = eAV
+
+            print "MLP Ready: mean-error at "+str(round(lastEAv,3))+", delta = "+str(round(rateOfError,5))+" after "+str(numberOfTeachings)+" loops"
+
+            # Classificação
+            instanceTested  = 0.0
+            succesCount     = 0.0
+
+            for sampleIndex in sample["T"]:
+                currentInstance = self.csv.getLine(sampleIndex)
+                instanceClass = currentInstance.pop(self.csv.classIndex)
+                success = mlp.forward(currentInstance, self.mlpExpectedVector(instanceClass), False)
+                instanceTested += 1
+                if success == True: succesCount += 1
+
+            print "Success rate: " + str(int(100*succesCount/instanceTested))+"%"
 
     # instancia tem classe 3 -> [0,0,1]
     def mlpExpectedVector(self, expectedClass):
         responseVector = []
         for aClass in self.csv.responseClasses():
-            if aClass == expectedClass: responseVector.append(1)
-            else: responseVector.append(0)
+            if aClass == expectedClass: responseVector.append(1.0)
+            else: responseVector.append(0.0)
         #print "Expected " + str(responseVector) + " : " + str(expectedClass)
         return responseVector
 
@@ -85,7 +107,7 @@ class kFold(object):
         # a) [3,  6,6, 2 ]
         # b) [3,  6,6,6, 2]
         # c) .. vetor de vetores
-        return [[attributesCount,attributesCount*2,3]]
+        return [[attributesCount,attributesCount*2,attributesCount*2,3]]
 
     def makeSample(self, iter):
         lower = iter*self.foldSize

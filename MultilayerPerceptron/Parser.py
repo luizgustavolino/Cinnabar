@@ -2,6 +2,7 @@
 # -*- coding: utf8 -*-
 
 import Helpers
+import random
 
 # logica aplicada aos dados lidos
 class CSV(object):
@@ -20,6 +21,8 @@ class CSV(object):
         # TODO: embaralhar as linhas
 
         headerLine = lines.pop(0)
+        random.shuffle(lines)
+
         headerFields = headerLine.split(separator)
         classesLabel = dict()
         response = dict()
