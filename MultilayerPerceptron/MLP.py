@@ -18,7 +18,7 @@ class MLP (object):
         self.n                  = 0  # Contagem de forwards, com learning
         self.instantErrorLog    = [] # Lista de erros instantâneos para cada forward de learning
         self.learningRate       = 0.1 # ƞ
-        self.a                  = 1.0  #
+        self.a                  = 1.0 #
 
         layersCount  = len(layout)
 
@@ -37,7 +37,8 @@ class MLP (object):
                     tag = "hl"+str(i)+"n"+str(j)
                     hlNeuron = Neuron(tag, self.a, self.learningRate)
                     currentLayer.append(hlNeuron)
-                    if i == layersCount -1: hlNeuron.insideOutputLayer = True
+                    if i == layersCount -1:
+                        hlNeuron.insideOutputLayer = True
 
             self.layers.append(currentLayer)
 
@@ -69,9 +70,9 @@ class MLP (object):
 
         # Avisa as sinapses de entrada e,
         # após os eventos em cascata, colhe a saida
-        print "-------------------------"
-        print "Iniciando passo forward"
-        print "-------------------------"
+        #print "-------------------------"
+        #print "Iniciando passo forward"
+        #print "-------------------------"
 
         for (j, inputNode) in enumerate(self.layers[0]):
             inputNode.receiveSignal(inputs[j])
@@ -81,14 +82,13 @@ class MLP (object):
             self.instantErrorLog.append(self.instantaneousErrorEnergy())
             self.n += 1
 
-            print "-------------------------"
-            print "Iniciando passo backward"
-            print "-------------------------"
+            #print "-------------------------"
+            #print "Iniciando passo backward"
+            #print "-------------------------"
 
-            for i,layer in enumerate(reversed(self.layers[2:])):
-                print("Aplicando correção nas sinapses da layer " + str(i))
-                for neuron in layer:
-                    neuron.weightFix()
+            for i,layer in enumerate(reversed(self.layers[1:])):
+                #print("Aplicando correção nas sinapses da layer " + str(i))
+                for neuron in layer: neuron.weightFix()
 
     def instantaneousErrorEnergy(self):
         #  ℰ(n) = (1/2) Σ(ej(n))^2
@@ -109,16 +109,24 @@ class Input (object):
         # Inputs são os receptores na camada de entrada
         # representam o atributo da instancia
         # Não tem sinapseIn, só sinapseOut
-        self.tag         = tag
-        self.synapsesOut = []
+        self.tag                = tag
+        self.synapsesOut        = []
+        self.accumulatedWeight  = 0
 
     def warmUp(self):
         pass
+
+    def sigmoid(self):
+        # na literatura, yj(n) = φj(vj(n))
+        sigmoidValue = 1 / (1+math.exp(self.accumulatedWeight * -1))
+        if sigmoidValue > 1 or sigmoidValue < 0: raise NameError('INVALID SIGMOID VALUE')
+        return sigmoidValue
 
     def receiveSignal(self, signalValue):
         # a input layer não tem somatório de valores
         # ela recebe de uma fonte somente, então para já ativar
         # o próximo passo
+        self.accumulatedWeight = signalValue
         for synapse in self.synapsesOut: synapse.signal(signalValue)
 
 class Output (object):
@@ -140,9 +148,9 @@ class Output (object):
     def signal(self, signalValue):
         # na literatura:  ej(n) = dj(n)-yj(n)
         self.error = self.expectedValue - signalValue
-        print("Output: " + str(signalValue)
-              + " (expected:"+str(self.expectedValue)
-              + ", error: "+str(self.error)+")")
+        #print("Output: " + str(signalValue)
+        #      + " (expected:"+str(self.expectedValue)
+        #      + ", error: "+str(self.error)+")")
 
 class Neuron (object):
 

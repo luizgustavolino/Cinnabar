@@ -23,13 +23,14 @@ class kFold(object):
         print "--------------------------------------------------"
 
         # multithreadingEnabled = true -> processa folds em threads
-        self.multithreadingEnabled = False
+        self.multithreadingEnabled = True
         processPool = []
 
         # dryRun = true -> roda somente uma vez, para testes
         self.dryRun = False
 
         for foldNum in range(0,k):
+
             if self.multithreadingEnabled == True and self.dryRun != True:
                 p = multiprocessing.Process(target=self.runMLP, args=(foldNum,))
                 processPool.append(p)
@@ -57,28 +58,34 @@ class kFold(object):
             mlp = MLP(layout)
 
             # 1 passo: treinamento do MLP
-            for sampleIndex in sample["S"]:
+            for i in range(0,20):
+                for sampleIndex in sample["S"]:
 
-                currentInstance = self.csv.getLine(sampleIndex)
-                currentInstance.pop(self.csv.classIndex)
-                mlp.forward(currentInstance, self.mlpExpectedVector())
+                    currentInstance = self.csv.getLine(sampleIndex)
+                    instanceClass = currentInstance.pop(self.csv.classIndex)
+                    mlp.forward(currentInstance, self.mlpExpectedVector(instanceClass))
 
-                if self.dryRun: break # dryrun roda uma vez só
+                    if self.dryRun: break # dryrun roda uma vez só
 
-            # TODO: 2 passo: classificação
+                    # TODO: 2 passo: classificação
+                print "Fold "+str(foldNum)+" run "+str(i)+" Av Error: " + str(mlp.averageSquaredErrorEnergy())
 
-            print "Av Error: " + str(mlp.averageSquaredErrorEnergy())
-
-    def mlpExpectedVector(self):
+    # instancia tem classe 3 -> [0,0,1]
+    def mlpExpectedVector(self, expectedClass):
         responseVector = []
-        for aClass in self.csv.headers:
-            if aClass == self.csv.className: responseVector.append(1)
+        for aClass in self.csv.responseClasses():
+            if aClass == expectedClass: responseVector.append(1)
             else: responseVector.append(0)
+        #print "Expected " + str(responseVector) + " : " + str(expectedClass)
         return responseVector
 
     def mlpLayouts(self, attributesCount):
         # TODO: pedir ajuda do hideki
-        return [[attributesCount,4,4,3]]
+        # [ attributesCount, willian passou(x hidden de x neuronios), count(classes) ]
+        # a) [3,  6,6, 2 ]
+        # b) [3,  6,6,6, 2]
+        # c) .. vetor de vetores
+        return [[attributesCount,attributesCount*2,3]]
 
     def makeSample(self, iter):
         lower = iter*self.foldSize

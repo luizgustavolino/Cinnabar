@@ -18,7 +18,7 @@ class CSV(object):
         lines = [line for line in lines if line.strip() != ""]
 
         # TODO: embaralhar as linhas
-        
+
         headerLine = lines.pop(0)
         headerFields = headerLine.split(separator)
         classesLabel = dict()
@@ -70,6 +70,10 @@ class CSV(object):
 
     def countLines(self):
         return len(self.raw[self.raw.keys()[0]])
+
+    def responseClasses(self):
+        classesValues = list(set(self.raw[self.className]))
+        return classesValues
 
     def getLine(self, num):
 
