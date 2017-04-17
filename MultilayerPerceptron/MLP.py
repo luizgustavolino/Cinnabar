@@ -21,6 +21,9 @@ class MLP (object):
         self.learningRate       = 0.1 # ƞ
         self.a                  = 1.0 #
         self.momentum           = momentum
+        self.classesCount       = layout[-1]
+        self.confMatrix         = [[0 for col in range(self.classesCount)] for row in range(self.classesCount)]
+
 
         layersCount  = len(layout)
 
@@ -92,13 +95,16 @@ class MLP (object):
             currentClass        = -1
             currentClassValue   = -1
 
+            # pega o output de maior signal
             for i, output in enumerate(self.outputs):
                 if output.lastSignal > currentClassValue:
                     currentClass        = i
                     currentClassValue   = output.lastSignal
 
+            # expectedOutputs: [0,0,1] = terceira classe
             for i, expected in enumerate(expectedOutputs):
                 if expected == 1:
+                    self.confMatrix[i][currentClass] += 1
                     if i == currentClass: return True
                     else: return False
 

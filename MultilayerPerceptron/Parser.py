@@ -63,10 +63,11 @@ class CSV(object):
 
                         response[headerFields[i]].append(fieldIndex + 1)
 
-        self.headers = headerFields
-        self.raw = response
-        self.classes = classesLabel
-        self.className = self.headers[self.classIndex]
+        self.headers        = headerFields
+        self.raw            = response
+        self.classes        = classesLabel
+        self.className      = self.headers[self.classIndex]
+        self.classesValues  = list(set(self.raw[self.className]))
 
         if cleanup:
             self.cleanup()

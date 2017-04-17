@@ -32,6 +32,8 @@ class kFold(object):
         bestElapsedTime     = 0
 
         layouts = self.mlpLayouts()
+        layoutsConfMatrix = {}
+
         for layout in layouts:
 
             # multithreadingEnabled = true -> processa folds em threads
@@ -44,6 +46,7 @@ class kFold(object):
             self.sumOfMeanAbs           = 0
             self.sumOfSucessRate        = 0
             self.numberOfTeachings      = 0
+            self.sumOfConfMatrix        = None
             self.bestLayoutMomentum     = 0.0
 
             # dryRun = true -> roda somente uma vez, para testes
@@ -71,10 +74,12 @@ class kFold(object):
                 self.sumOfMeanAbs        += aResponse["MAbs"]
                 self.sumOfSucessRate     += aResponse["SucR"]
                 self.numberOfTeachings   += aResponse["Teac"]
+                self.sumConfMatrix(aResponse["Conf"])
 
             successRate = self.sumOfSucessRate/foldLimit
             loops       = int(self.numberOfTeachings/foldLimit)
             elapsed     = time.time() - start_time
+            layoutsConfMatrix[str(layout)] = self.sumOfConfMatrix
 
             log  = str(layout)
             log += " mean-abs: " + str(round(self.sumOfMeanAbs/foldLimit, 3))
@@ -103,6 +108,24 @@ class kFold(object):
 
         print "Best layout: " + str(bestLayout)
 
+        #escolher a melhor matriz conf
+        bestConfiMatrix = layoutsConfMatrix[str(bestLayout)]
+        classesValues   = self.csv.classes[self.csv.className]
+        header = [str(layout)]
+        output = [header]
+
+        for i, iClass in enumerate(classesValues):
+            header.append(str(iClass))
+            line = [str(iClass)]
+            for j, jClass in enumerate(classesValues):
+                line.append(str(bestConfiMatrix[i][j]))
+
+            output.append(line)
+
+        print "\n"
+        Helpers.printTable(output)
+        print "\n"
+
         ## Validação de melhor a
         for aMomentum in [0.0, 0.25, 0.5, 0.75, 0.9]:
 
@@ -110,6 +133,7 @@ class kFold(object):
             self.sumOfRootDeviantion    = 0
             self.sumOfMeanAbs           = 0
             self.sumOfSucessRate        = 0
+            self.sumOfConfMatrix        = None
             self.numberOfTeachings      = 0
             self.bestLayoutMomentum     = 0.0
 
@@ -184,7 +208,8 @@ class kFold(object):
             'SucR': succesCount/instanceTested,
             'SDev': mlp.rootMeanSquareDeviation(),
             'MAbs': mlp.meanAbsoluteError(),
-            'Teac': numberOfTeachings
+            'Teac': numberOfTeachings,
+            'Conf': mlp.confMatrix
         }
 
         responseQueue.put(respose)
@@ -228,3 +253,12 @@ class kFold(object):
         testRange = range(lower, upper)
         sampleRange = list(set(range(self.csv.countLines()))-set(testRange))
         return {"T":testRange, "S":sampleRange}
+
+    def sumConfMatrix(self, newMatrix):
+
+        if self.sumOfConfMatrix == None:
+            self.sumOfConfMatrix = newMatrix
+        else:
+            for i, sm in enumerate(newMatrix):
+                for j, v in enumerate(sm):
+                    self.sumOfConfMatrix[i][j] += v
