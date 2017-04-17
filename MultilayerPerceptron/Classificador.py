@@ -237,6 +237,7 @@ class kFold(object):
             if i == 3: n = int(qMax * 2)
 
             for j in xrange(1,3):
+                if i == 3 and j == 2: continue
                 layout.append(inputs)
                 if j == 2: layout.append(n)
                 layout.append(n)
