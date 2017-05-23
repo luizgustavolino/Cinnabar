@@ -29,9 +29,13 @@ class CourtWorld(object):
 
     def processCollision(self, arbiter, space, data):
 
+        trues = 0
         for shape in arbiter.shapes:
             if shape.sensor == True:
-                print("BANG!")
+                trues += 1
+
+        if trues == 2:
+            print("BANG!")
 
         return True
 
@@ -61,7 +65,7 @@ class CourtWorld(object):
     def makeBasket(self):
         radius  = 6
         size    = 80
-        
+
         for delta in [0,size]:
             staticBody = self.space.static_body
             shape = pymunk.Circle(staticBody, radius, (self.sw*0.8 + delta, self.sh*0.4))
@@ -77,24 +81,36 @@ class CourtWorld(object):
         self.space.add(line)
 
     def throwRandomBall(self):
-        self.throwBall( 45, self.sw * 500 + random.randint(-10000,10000))
+        self.throwBall( 45, random.random())
 
     def throwBall(self, theta, force):
 
         #decomposição vetorial
+        force = force * self.sw * 500
         fx = force * math.cos(math.radians(theta))
         fy = force * math.sin(math.radians(theta))
 
         ball_mass   = 9
         ball_radius = 22
+
         ball_moment = pymunk.moment_for_circle(ball_mass, 0, ball_radius, (0,0))
         body = pymunk.Body(ball_mass, ball_moment)
-        body.position = self.sw*0.2, self.sh*0.4
-
         shape = pymunk.Circle(body, ball_radius, (0,0))
         shape.elasticity = 0.62
         shape.friction = 0.9
-        self.space.add(body, shape)
+        body.position = self.sw*0.2, self.sh*0.4
+
+        collision_ball_moment = pymunk.moment_for_circle(1, 0, 2, (0,0))
+        collision_body = pymunk.Body(1, collision_ball_moment)
+        collision_shape = pymunk.Circle(collision_body, 2, (0,0))
+        collision_shape.sensor = True
+        collision_body.position = self.sw*0.2, self.sh*0.4
+
+        balls = pymunk.PinJoint(body, collision_body, (0,0))
+        balls.distance = 0
+
+        self.space.add(body, shape, collision_body, collision_shape)
+        self.space.add(balls)
 
         body.apply_force_at_local_point( (fx, fy), (0,0))
 
@@ -133,7 +149,7 @@ class CourtGame(object):
             self.clock.tick(50)
 
             tick += 1
-            if tick%120 == 0:
+            if tick%40 == 0:
                 self.world.throwRandomBall()
 
 c = CourtGame(960,540)
