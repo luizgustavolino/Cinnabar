@@ -21,8 +21,19 @@ class CourtWorld(object):
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
 
-        self.makeFloor()
+        self.makeCourt()
         self.makeBasket()
+
+        ch = self.space.add_collision_handler(0, 0)
+        ch.begin = self.processCollision
+
+    def processCollision(self, arbiter, space, data):
+
+        for shape in arbiter.shapes:
+            if shape.sensor == True:
+                print("BANG!")
+
+        return True
 
     def linkDebugDraw(self, screen):
         self.drawOptions = pymunk.pygame_util.DrawOptions(screen)
@@ -34,7 +45,7 @@ class CourtWorld(object):
         dt = 1.0/60.0
         self.space.step(dt)
 
-    def makeFloor(self):
+    def makeCourt(self):
 
         staticBody = self.space.static_body
         line =  pymunk.Segment(staticBody, (0.0, 10), (self.sw, 10), 0.0)
@@ -48,21 +59,31 @@ class CourtWorld(object):
         self.space.add(wall)
 
     def makeBasket(self):
-
-        for delta in [0,80]:
+        radius  = 6
+        size    = 80
+        
+        for delta in [0,size]:
             staticBody = self.space.static_body
-            shape = pymunk.Circle(staticBody, 6, (self.sw*0.8 + delta, self.sh*0.4))
+            shape = pymunk.Circle(staticBody, radius, (self.sw*0.8 + delta, self.sh*0.4))
             shape.elasticity = 0.95
             shape.friction = 0.9
             self.space.add(shape)
 
-    def throwRandomBall(self):
-        self.makeBall(
-            199000 + random.randint(-10000,10000),
-            414200 + random.randint(-10000,10000)
-        )
+        staticBody = self.space.static_body
+        line =  pymunk.Segment(staticBody,
+            (self.sw*0.8, self.sh*0.4 - radius),
+            (self.sw*0.8 + size, self.sh*0.4 - radius), 0.0)
+        line.sensor = True
+        self.space.add(line)
 
-    def makeBall(self, vx, vy):
+    def throwRandomBall(self):
+        self.throwBall( 45, self.sw * 500 + random.randint(-10000,10000))
+
+    def throwBall(self, theta, force):
+
+        #decomposição vetorial
+        fx = force * math.cos(math.radians(theta))
+        fy = force * math.sin(math.radians(theta))
 
         ball_mass   = 9
         ball_radius = 22
@@ -75,7 +96,7 @@ class CourtWorld(object):
         shape.friction = 0.9
         self.space.add(body, shape)
 
-        body.apply_force_at_local_point( (vx, vy), (0,0))
+        body.apply_force_at_local_point( (fx, fy), (0,0))
 
 class CourtGame(object):
 
@@ -116,3 +137,10 @@ class CourtGame(object):
                 self.world.throwRandomBall()
 
 c = CourtGame(960,540)
+
+## for i in range(0,1000):
+##    print("test", i)
+##    court = CourtWorld(960, 540)
+##    court.throwRandomBall()
+##    for i in range(0,300):
+##        court.step()
