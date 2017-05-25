@@ -167,7 +167,7 @@ class kFold(object):
         threshold           = 0.001
         numberOfTeachings   = 0
         rateOfError         = 1
-        maxTeachings        = 150
+        maxTeachings        = 800
         minTeachings        = 20
 
         # ### Treinamento do MLP ###
@@ -246,7 +246,8 @@ class kFold(object):
                 layoutGroup.append(layout)
                 layout = []
 
-        return layoutGroup
+        return [[2,8,8,4]]
+        #return layoutGroup
 
     def makeSample(self, iter):
         lower = iter*self.foldSize

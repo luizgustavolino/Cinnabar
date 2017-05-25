@@ -61,6 +61,10 @@ def parseArguments():
 def fileArguments():
     files = [
         {
+            "file": "input/agene.csv",
+            "separator": ";",
+            "class-index": 2
+        },{
             "file": "input/iris.csv",
             "separator": ",",
             "class-index": 4
