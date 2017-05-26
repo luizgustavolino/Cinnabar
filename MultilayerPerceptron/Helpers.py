@@ -65,6 +65,10 @@ def fileArguments():
             "separator": ";",
             "class-index": 2
         },{
+            "file": "input/agene-4.csv",
+            "separator": ";",
+            "class-index": 2
+        },{
             "file": "input/iris.csv",
             "separator": ",",
             "class-index": 4

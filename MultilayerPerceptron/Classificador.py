@@ -23,7 +23,7 @@ class kFold(object):
         print " Considerando como class a coluna: " + self.csv.className + " (M="+str(classesCount)+")"
         print "--------------------------------------------------"
 
-        foldLimit = k
+        foldLimit = 1
         print "[ Considerando "+str(foldLimit)+" folds ]"
 
         bestLayout          = None
@@ -127,7 +127,7 @@ class kFold(object):
         print "\n"
 
         ## Validação de melhor a
-        for aMomentum in [0.0, 0.25, 0.5, 0.75, 0.9]:
+        for aMomentum in [0.0]:
 
             # Sums
             self.sumOfRootDeviantion    = 0
@@ -167,7 +167,7 @@ class kFold(object):
         threshold           = 0.001
         numberOfTeachings   = 0
         rateOfError         = 1
-        maxTeachings        = 800
+        maxTeachings        = 200
         minTeachings        = 20
 
         # ### Treinamento do MLP ###
@@ -253,7 +253,8 @@ class kFold(object):
         lower = iter*self.foldSize
         upper = min(lower + self.foldSize, self.csv.countLines())
         testRange = range(lower, upper)
-        sampleRange = list(set(range(self.csv.countLines()))-set(testRange))
+        #sampleRange = list(set(range(self.csv.countLines()))-set(testRange))
+        sampleRange = range(0, self.csv.countLines())
         return {"T":testRange, "S":sampleRange}
 
     def sumConfMatrix(self, newMatrix):

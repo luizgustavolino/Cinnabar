@@ -84,9 +84,9 @@ class CourtWorld(object):
 
         segments = []
         staticBody = self.space.static_body
-        self.floor = pymunk.Segment(staticBody, (0.0, 10), (self.sw, 10), 0.0)
+        self.floor = pymunk.Segment(staticBody, (0.0, 10), (self.sw*10, 10), 0.0)
         segments.append(self.floor)
-        segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
+        #segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
 
         for segment in segments:
@@ -112,7 +112,7 @@ class CourtWorld(object):
         staticBody = self.space.static_body
         line =  pymunk.Segment(staticBody,
             (0, self.sh*0.4 ),
-            (self.sw, self.sh*0.4 ), 0.0)
+            (self.sw*2, self.sh*0.4 ), 0.0)
         line.sensor = True
         self.basketCenter = self.sw*0.8 + size/2
         self.space.add(line)
@@ -131,7 +131,7 @@ class CourtWorld(object):
         self.success    = False
 
         #decomposição vetorial
-        force = force * self.sw * 500
+        force = force * self.sw * 720
         fx = force * math.cos(math.radians(theta))
         fy = force * math.sin(math.radians(theta))
 
@@ -197,13 +197,16 @@ class CourtGame(object):
 
 #CourtGame(960, 540)
 
-for dtheta in range(10,90,2):
-    for df in range(50,100,2):
+for dtheta in range(30,50):
+    for df in range(500,800):
 
         court = CourtWorld(960, 540)
-        ff = df/100.0
+        ff = df/1000.0
         court.throwBall(dtheta, ff)
+
         while court.classification == None:
             court.step()
 
-        print str(dtheta) + ";" + str(ff) + ";" + str(court.classification)
+        normTheta = (dtheta-30.0)/20.0
+        normff    = ((df - 500.0)/300)
+        print str(normTheta) + ";" + str(normff) + ";" + str(court.classification)
