@@ -189,22 +189,28 @@ class CourtGame(object):
             self.clock.tick(50)
 
 
-game = CourtGame(960, 540)
-game.throwBall(45, 0.6)
-game.gameLoop()
+testing  = False
+training = False
 
-if None:
+if testing:
+    if training == False:
 
-    for dtheta in range(10,80):
-        for df in range(500,800):
+        game = CourtGame(960, 540)
+        game.throwBall(45, 0.6)
+        game.gameLoop()
 
-            court = CourtWorld(960, 540)
-            ff = df/1000.0
-            court.throwBall(dtheta, ff)
+    else:
 
-            while court.classification == None:
-                court.step()
+        for dtheta in range(10,80):
+            for df in range(500,800):
 
-            normTheta = (dtheta-10.0)/70.0
-            normff    = ((df - 500.0)/300)
-            print str(normTheta) + ";" + str(normff) + ";" + str(court.classification)
+                court = CourtWorld(960, 540)
+                ff = df/1000.0
+                court.throwBall(dtheta, ff)
+
+                while court.classification == None:
+                    court.step()
+
+                normTheta = (dtheta-10.0)/70.0
+                normff    = ((df - 500.0)/300)
+                print str(normTheta) + ";" + str(normff) + ";" + str(court.classification)
