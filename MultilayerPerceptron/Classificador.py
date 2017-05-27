@@ -11,7 +11,7 @@ class kFold(object):
 
     def __init__(self, csv, k):
 
-        self.foldSize = int(math.ceil(csv.countLines()/float(k)))
+        self.foldSize = csv.countLines()
         self.csv = csv
 
         classesValues = list(set(self.csv.raw[self.csv.className]))
@@ -168,13 +168,13 @@ class kFold(object):
         numberOfTeachings   = 0
         rateOfError         = 1
         maxTeachings        = 200
-        minTeachings        = 20
+        minTeachings        = 500
 
         # ### Treinamento do MLP ###
         # Parada 1: taxa de erro menor que o gatilho
         # Parada 2: taxa de erro menor que 15%
         # Parada 3: atingiu o max de treinamentos
-        while (rateOfError > threshold or lastEAv > 0.15) and numberOfTeachings < maxTeachings:
+        while numberOfTeachings < minTeachings:
 
             numberOfTeachings += 1
             for sampleIndex in sample["S"]:

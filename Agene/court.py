@@ -22,6 +22,7 @@ class CourtWorld(object):
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
         self.classification = None
+        self.holographicBasket = False
 
         self.makeCourt()
         self.makeBasket()
@@ -101,12 +102,13 @@ class CourtWorld(object):
 
         # Cria os dois shapes circulares
         # e adiciona ao cenário
-        for delta in [0,size]:
-            staticBody = self.space.static_body
-            shape = pymunk.Circle(staticBody, radius, (self.sw*0.8 + delta, self.sh*0.4))
-            shape.elasticity = 0.95
-            shape.friction = 0.9
-            #self.space.add(shape)
+        if self.holographicBasket == False:
+            for delta in [0,size]:
+                staticBody = self.space.static_body
+                shape = pymunk.Circle(staticBody, radius, (self.sw*0.8 + delta, self.sh*0.4))
+                shape.elasticity = 0.95
+                shape.friction = 0.9
+                self.space.add(shape)
 
         # Cria o sensor para marcar ponto
         staticBody = self.space.static_body
@@ -163,17 +165,17 @@ class CourtGame(object):
         self.running = True
         self.clock = pygame.time.Clock()
         self.makeWorld()
-        self.gameLoop()
 
     def makeWorld(self):
         self.world = CourtWorld(self.sw, self.sh)
         self.world.linkDebugDraw(self.screen)
+        self.world.holographicBasket
+
+    def throwBall(self, theta, force):
+        self.world.throwBall(theta, force)
 
     def gameLoop(self):
 
-        print("SHOW TIME!")
-
-        tick = 0
         while True:
 
             for event in pygame.event.get():
@@ -186,27 +188,23 @@ class CourtGame(object):
             pygame.display.flip()
             self.clock.tick(50)
 
-            print self.world.classification
 
-            if tick%120 == 0:
-                self.world.classification = None
-                self.world.throwRandomBall()
+game = CourtGame(960, 540)
+game.throwBall(45, 0.6)
+game.gameLoop()
 
-            tick += 1
+if None:
 
+    for dtheta in range(10,80):
+        for df in range(500,800):
 
-#CourtGame(960, 540)
+            court = CourtWorld(960, 540)
+            ff = df/1000.0
+            court.throwBall(dtheta, ff)
 
-for dtheta in range(30,50):
-    for df in range(500,800):
+            while court.classification == None:
+                court.step()
 
-        court = CourtWorld(960, 540)
-        ff = df/1000.0
-        court.throwBall(dtheta, ff)
-
-        while court.classification == None:
-            court.step()
-
-        normTheta = (dtheta-30.0)/20.0
-        normff    = ((df - 500.0)/300)
-        print str(normTheta) + ";" + str(normff) + ";" + str(court.classification)
+            normTheta = (dtheta-10.0)/70.0
+            normff    = ((df - 500.0)/300)
+            print str(normTheta) + ";" + str(normff) + ";" + str(court.classification)
