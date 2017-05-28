@@ -11,7 +11,7 @@ class kFold(object):
 
     def __init__(self, csv, k):
 
-        self.foldSize = csv.countLines()
+        self.foldSize = int(math.ceil(csv.countLines()/float(k)))
         self.csv = csv
 
         classesValues = list(set(self.csv.raw[self.csv.className]))
@@ -127,54 +127,60 @@ class kFold(object):
         print "\n"
 
         ## Validação de melhor a
-        for aMomentum in [0.0]:
+        # for aMomentum in [0.0]:
 
-            # Sums
-            self.sumOfRootDeviantion    = 0
-            self.sumOfMeanAbs           = 0
-            self.sumOfSucessRate        = 0
-            self.sumOfConfMatrix        = None
-            self.numberOfTeachings      = 0
-            self.bestLayoutMomentum     = 0.0
+        #     # Sums
+        #     self.sumOfRootDeviantion    = 0
+        #     self.sumOfMeanAbs           = 0
+        #     self.sumOfSucessRate        = 0
+        #     self.sumOfConfMatrix        = None
+        #     self.numberOfTeachings      = 0
+        #     self.bestLayoutMomentum     = 0.0
 
-            processPool     = []
-            responseQueue   = multiprocessing.Queue()
+        #     processPool     = []
+        #     responseQueue   = multiprocessing.Queue()
 
-            for foldNum in range(0, foldLimit):
-                p = multiprocessing.Process(
-                        target=self.runMLP,
-                        args=(foldNum, bestLayout, aMomentum, responseQueue,))
-                processPool.append(p)
+        #     for foldNum in range(0, foldLimit):
+        #         p = multiprocessing.Process(
+        #                 target=self.runMLP,
+        #                 args=(foldNum, bestLayout, aMomentum, responseQueue,))
+        #         processPool.append(p)
 
-            for p in processPool: p.start()
-            for p in processPool: p.join()
+        #     for p in processPool: p.start()
+        #     for p in processPool: p.join()
 
-            while responseQueue.empty() == False :
-                aResponse = responseQueue.get()
-                self.sumOfSucessRate     += aResponse["SucR"]
-                self.numberOfTeachings   += aResponse["Teac"]
+        #     while responseQueue.empty() == False :
+        #         aResponse = responseQueue.get()
+        #         self.sumOfSucessRate     += aResponse["SucR"]
+        #         self.numberOfTeachings   += aResponse["Teac"]
 
-            loops = int(self.numberOfTeachings/foldLimit)
-            successRate = str(round(self.sumOfSucessRate/foldLimit, 3)) + "%"
-            print "Para momentum = "+ str(round(aMomentum,2)) +", loops: " + str(loops) + ", success: " + successRate
+        #     loops = int(self.numberOfTeachings/foldLimit)
+        #     successRate = str(round(self.sumOfSucessRate/foldLimit, 3)) + "%"
+        #     print "Para momentum = "+ str(round(aMomentum,2)) +", loops: " + str(loops) + ", success: " + successRate
 
     def runMLP(self, foldNum, layout, momentum, responseQueue):
 
         sample = self.makeSample(foldNum)
 
-        mlp                 = MLP(layout, momentum)
+        #Controla se vai ler pesos do txt
+        #Caso sim, nao treina a rede, apenas testa
+        #Caso nao, rede treinada normalmente e novos pesos salvos em um arquivo
+        shouldReadFromFile  = True
+
+
+        mlp                 = MLP(layout, momentum, shouldReadFromFile)
         lastEAv             = None
         threshold           = 0.001
         numberOfTeachings   = 0
         rateOfError         = 1
         maxTeachings        = 200
-        minTeachings        = 500
+        minTeachings        = 20
 
         # ### Treinamento do MLP ###
         # Parada 1: taxa de erro menor que o gatilho
         # Parada 2: taxa de erro menor que 15%
         # Parada 3: atingiu o max de treinamentos
-        while numberOfTeachings < minTeachings:
+        while (rateOfError > threshold or lastEAv > 0.15) and numberOfTeachings < maxTeachings and shouldReadFromFile == False:
 
             numberOfTeachings += 1
             for sampleIndex in sample["S"]:
@@ -188,6 +194,10 @@ class kFold(object):
             eAV = mlp.averageSquaredErrorEnergy()
             if lastEAv != None: rateOfError = lastEAv - eAV
             lastEAv = eAV
+
+            
+            print numberOfTeachings
+
 
         # Classificação
         instanceTested  = 0.0
@@ -212,7 +222,75 @@ class kFold(object):
             'Conf': mlp.confMatrix
         }
 
+
+        #Rotina para salvar pesos no txt
+        if shouldReadFromFile == False:
+            layers = mlp.layers
+            allLayersWeights = self.getWeights(layers)
+            biasWeights = self.getBiasWeights(layers)
+            self.createTxt(allLayersWeights)
+            self.createBiasTxt(biasWeights)
+
         responseQueue.put(respose)
+
+    def getBiasWeights(self, layers):
+        #Percorre os neuronios da MLP, pegando o pesos nos bias, apos o treinamento da rede
+        biasWeights = []
+
+        for i, neurons in enumerate(layers):
+            if i > 0:
+                for neuron in neurons:
+                    synapse = neuron.synapsesIn[0]
+                    biasWeights.append(synapse.weight)
+                    print neuron.tag, synapse.weight
+
+        return biasWeights
+
+    def getWeights(self, layers):
+        #Percorre os neuronios da MLP, pegando o pesos nos de input, apos o treinamento da rede
+        allLayersWeights = []
+
+        for i, neurons in enumerate(layers):
+            if i < len(layers) - 1:
+                for neuron in neurons:
+                    currentNeuronWeights = []
+                    for synapse in neuron.synapsesOut:
+                        currentNeuronWeights.append(synapse.weight)
+                        print neuron.tag, synapse.weight, synapse.destiny.tag
+                    allLayersWeights.append(currentNeuronWeights)
+
+        return allLayersWeights
+
+    def createTxt(self, allLayersWeights):
+        #Cria um arquivo .txt, com os pesos de saida de cada neuronio
+        file = open("weights.txt", "w")
+
+        for neuron in allLayersWeights:
+            stringWeights = ""
+            print neuron, "\n"
+            for weight in neuron:
+               stringWeights += '{0:.16f}'.format(weight) + ";"
+  
+            stringWeights = stringWeights[:-1]
+            stringWeights += "\n"
+            file.write(stringWeights)
+
+        file.close()
+        print "\n\n"
+
+    def createBiasTxt(self, biasWeights):
+        #Cria um arquivo .txt, com os pesos do bias de cada neuronio
+        file = open("bias.txt", "w")
+        stringWeights = ""
+
+        for weight in biasWeights:
+            stringWeights += '{0:.16f}'.format(weight) + ";"
+
+        stringWeights = stringWeights[:-1]
+        stringWeights += "\n"
+        file.write(stringWeights)
+        file.close()
+
 
     # instancia tem classe 3 -> [0,0,1]
     def mlpExpectedVector(self, expectedClass):
