@@ -8,9 +8,10 @@ from scene_court import *
 class Engine(object):
 
     def __init__(self):
-        self.scene = SceneCourt()
+        self.frame  = 0
         self.clock = pygame.time.Clock()
         self.makeSurface()
+        self.scene = SceneCourt()
 
     def start(self):
         self.gameLoop()
@@ -18,9 +19,10 @@ class Engine(object):
     def makeSurface(self):
         self.sw = 960
         self.sh = 540
-        self.surface = pygame.display.set_mode((self.sw, self.sh),
-                        pygame.DOUBLEBUF | pygame.FULLSCREEN)
+        flags = pygame.DOUBLEBUF | pygame.FULLSCREEN
+        self.surface = pygame.display.set_mode((self.sw, self.sh), flags)
         pygame.mouse.set_visible(False)
+        pygame.event.set_allowed([KEYDOWN])
 
     def gameLoop(self):
         while True:
@@ -35,17 +37,21 @@ class Engine(object):
                     else: events.append(event)
 
             # prepara a tela
-            self.surface.fill(THECOLORS["white"])
+            self.surface.fill(THECOLORS["black"])
 
             # roda o game loop
             if self.scene != None:
                 for event in events:
                     self.scene.event(event)
-                self.scene.update()
+                self.scene.update(self.frame)
                 self.scene.draw(self.surface)
 
             # swap de framebuuffer
             pygame.display.flip()
 
             # mantem 60FPS
+            self.frame += 1
             self.clock.tick(60)
+
+            text = "FPS: {0:.2f}".format(self.clock.get_fps())
+            print(text)
