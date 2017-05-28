@@ -23,7 +23,7 @@ class kFold(object):
         print " Considerando como class a coluna: " + self.csv.className + " (M="+str(classesCount)+")"
         print "--------------------------------------------------"
 
-        foldLimit = 1
+        foldLimit = k
         print "[ Considerando "+str(foldLimit)+" folds ]"
 
         bestLayout          = None
@@ -174,7 +174,8 @@ class kFold(object):
         # Parada 1: taxa de erro menor que o gatilho
         # Parada 2: taxa de erro menor que 15%
         # Parada 3: atingiu o max de treinamentos
-        while numberOfTeachings < minTeachings:
+        # while numberOfTeachings < minTeachings:
+        while (rateOfError > threshold or lastEAv > 0.15) and numberOfTeachings < maxTeachings:
 
             numberOfTeachings += 1
             for sampleIndex in sample["S"]:

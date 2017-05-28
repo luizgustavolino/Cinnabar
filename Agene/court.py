@@ -57,16 +57,12 @@ class CourtWorld(object):
                     deltaDistance = abs(self.currentBall.position.x - self.basketCenter)
 
                     if deltaDistance < 30:
-                        #print "HIT!"
                         self.classification = "acertou"
                     elif deltaDistance < 60:
-                        #print "MUITO PERTO!"
                         self.classification = "muito perto"
                     elif deltaDistance < 120:
-                        #print "PERTO!"
                         self.classification = "perto"
                     else:
-                        #print "LONGEE!"
                         self.classification = "longe"
 
         return True
@@ -87,7 +83,7 @@ class CourtWorld(object):
         staticBody = self.space.static_body
         self.floor = pymunk.Segment(staticBody, (0.0, 10), (self.sw*10, 10), 0.0)
         segments.append(self.floor)
-        #segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
+        segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
 
         for segment in segments:
@@ -159,9 +155,16 @@ class CourtGame(object):
     def __init__(self, sw, sh):
 
         pygame.init()
-        self.sw = sw
-        self.sh = sh
-        self.screen = pygame.display.set_mode((sw, sh))
+
+        dInfo = pygame.display.Info()
+        self.sw = sw #dInfo.current_w
+        self.sh = sh #dInfo.current_h
+
+        print "Current res: " + str(self.sw) + " x " + str(self.sh)
+
+        self.screen = pygame.display.set_mode((self.sw, self.sh),
+                        pygame.DOUBLEBUF | pygame.FULLSCREEN)
+
         self.running = True
         self.clock = pygame.time.Clock()
         self.makeWorld()
@@ -179,6 +182,11 @@ class CourtGame(object):
         while True:
 
             for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_f:
+                        pygame.display.toggle_fullscreen()
+                    elif event.key == pygame.K_q:
+                        return
                 if event.type == QUIT:
                     return
 
@@ -186,10 +194,10 @@ class CourtGame(object):
             self.screen.fill(THECOLORS["white"])
             self.world.debugDraw()
             pygame.display.flip()
-            self.clock.tick(50)
+            self.clock.tick(60)
 
 
-testing  = False
+testing  = True
 training = False
 
 if testing:
