@@ -6,7 +6,7 @@ import math
 
 class MLP (object):
 
-    def __init__(self, layout, momentum):
+    def __init__(self, layout, momentum, shouldReadFromFile):
         # cria uma rede MLP seguindo a quantidade
         # de neuronios do layout (vetor de ints)
 
@@ -27,8 +27,12 @@ class MLP (object):
 
         layersCount  = len(layout)
 
+        #lendo os pesos do txt
+        biasWeights = self.readBiasWeights()
+       
         # Criando os layers, inputs,neuronios e outputs
         # enumerate([2,2,1]) -> [(0,2),(1,2),(2,1)]
+        indexOfNeuron = 0
         for i, nCount in enumerate(layout):
             currentLayer = []
             for j in range(0, nCount):
@@ -40,23 +44,46 @@ class MLP (object):
                 elif i < layersCount:
                     #print "Criando neuronio "+str(j)+" da layer "+str(i)
                     tag = "hl"+str(i)+"n"+str(j)
-                    hlNeuron = Neuron(tag, self.a, self.learningRate, self.momentum)
+
+                    biasWeight = 0.0
+                    if shouldReadFromFile == True:
+                        biasWeight = biasWeights[indexOfNeuron]
+                    else:
+                        biasWeight = random.uniform(-1,1)
+
+                    hlNeuron = Neuron(tag, self.a, self.learningRate, self.momentum, biasWeight)
                     currentLayer.append(hlNeuron)
                     if i == layersCount -1:
                         hlNeuron.insideOutputLayer = True
+                    indexOfNeuron += 1
 
             self.layers.append(currentLayer)
 
+
+        #lendo os pesos do txt
+        allLayersWeights = self.readWeights()
+       
+
+        indexOfNeuron = 0
         # Criando as sinapses entre os neuronios
         for i, layer in enumerate(self.layers):
 
             if i < layersCount - 1:
                 nextLayer = self.layers[i+1]
                 for neuron in layer:
-                    for target in nextLayer:
-                        synapse = Synapse(neuron,target)
+                    neuronWeights = allLayersWeights[indexOfNeuron]
+                    for j, target in enumerate(nextLayer):
+
+                        synapseWeight = 0.0
+                        if shouldReadFromFile == True:
+                            synapseWeight = neuronWeights[j]
+                        else:
+                            synapseWeight = random.uniform(-1,1)
+
+                        synapse = Synapse(neuron,target, synapseWeight)
                         neuron.synapsesOut.append(synapse)
                         target.synapsesIn.append(synapse)
+                    indexOfNeuron += 1
             else:
                 for neuron in layer:
                     out = Output("output", neuron)
@@ -137,6 +164,28 @@ class MLP (object):
             if output.expectedValue == 1:
                 return output.error
 
+    def readBiasWeights(self):
+        fileBias = open("bias.txt", "r")
+
+        biasWeights = []
+        for line in fileBias:
+            stringArray = line.split(";")
+            biasWeights = [float(item) for item in stringArray]
+
+        return biasWeights
+
+    def readWeights(self):
+        file = open("weights.txt", "r")
+
+        allLayersWeights = []
+        for line in file:
+            stringArray = line.split(";")
+            weightsArray = [float(item) for item in stringArray]
+            allLayersWeights.append(weightsArray)
+
+        return allLayersWeights
+
+
 class Input (object):
 
     def __init__(self, tag):
@@ -187,13 +236,13 @@ class Output (object):
 
 class Neuron (object):
 
-    def __init__(self, tag, a, learningRate, momentum):
+    def __init__(self, tag, a, learningRate, momentum, biasWeight):
         # cria um neuronio, que tera sinapses
         # de entrada e saida
         self.tag                = tag
         self.signalsReceived    = 0
         self.accumulatedWeight  = 0.0           # vj(n)
-        self.bias               = Bias(self)    # bj(n)
+        self.bias               = Bias(self, biasWeight)    # bj(n)
         self.synapsesIn         = [self.bias]
         self.synapsesOut        = []
         self.a                  = a
@@ -264,13 +313,13 @@ class Neuron (object):
 
 class Synapse (object):
 
-    def __init__(self, source, destiny):
+    def __init__(self, source, destiny, weight):
         # cria uma sinapse, que tem um neuronio
         # de entrada e um de saida
         self.source     = source
         self.destiny    = destiny
         self.lastDelta  = 0
-        self.weight     = random.uniform(-1,1)
+        self.weight     = weight 
 
     def signal(self,input):
         # recebe um estimulo e repassa
@@ -279,13 +328,14 @@ class Synapse (object):
 
 class Bias (object):
 
-    def __init__(self, destiny):
+    def __init__(self, destiny, biasWeight):
         # similar a Sinapse, mas sempre tem
         # 1 como entrada
         self.destiny = destiny
         self.source = self
         self.lastDelta = 0
-        self.weight = random.uniform(-1,1)
+        self.weight = biasWeight 
+        #print self.weight
         self.accumulatedWeight = self.weight
 
     def sigmoid(self):
