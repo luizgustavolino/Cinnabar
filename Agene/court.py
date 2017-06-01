@@ -18,11 +18,11 @@ class CourtWorld(object):
         self.sw = sw
         self.sh = sh
         self.gravity = 9.0
-        self.basketSize = 80
+        self.basketSize = 50
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
         self.classification = None
-        self.holographicBasket = False
+        self.holographicBasket = True
 
         self.makeCourt()
         self.makeBasket()
@@ -81,7 +81,7 @@ class CourtWorld(object):
 
         segments = []
         staticBody = self.space.static_body
-        self.floor = pymunk.Segment(staticBody, (0.0, 10), (self.sw*10, 10), 0.0)
+        self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 120), 0.0)
         segments.append(self.floor)
         segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
@@ -91,9 +91,10 @@ class CourtWorld(object):
             segment.friction = 0.9
             self.space.add(segment)
 
+
     def makeBasket(self):
         # Cesta = dois circulos, corte vertical do aro
-        radius  = 6  # espessura do aro
+        radius  = 3  # espessura do aro
         size    = self.basketSize # tamanho da abertura
 
         # Cria os dois shapes circulares
@@ -101,18 +102,31 @@ class CourtWorld(object):
         if self.holographicBasket == False:
             for delta in [0,size]:
                 staticBody = self.space.static_body
-                shape = pymunk.Circle(staticBody, radius, (self.sw*0.8 + delta, self.sh*0.4))
+                shape = pymunk.Circle(staticBody, radius, (759 + delta, 310))
                 shape.elasticity = 0.95
                 shape.friction = 0.9
                 self.space.add(shape)
 
+        # Cria o fundo da cesta
+        staticBody = self.space.static_body
+        backboard = pymunk.Poly(staticBody, [
+              (826, 540-258),
+              (834, 540-258),
+              (834, 540-124),
+              (826, 540-124)
+        ])
+
+        backboard.elasticity = 0.95
+        backboard.friction = 0.9
+        self.space.add(backboard)
+
         # Cria o sensor para marcar ponto
         staticBody = self.space.static_body
         line =  pymunk.Segment(staticBody,
-            (0, self.sh*0.4 ),
-            (self.sw*2, self.sh*0.4 ), 0.0)
+            (0, 310 ),
+            (self.sw*2, 310), 0.0)
         line.sensor = True
-        self.basketCenter = self.sw*0.8 + size/2
+        self.basketCenter = 759 + size/2
         self.space.add(line)
 
     def throwRandomBall(self):
@@ -120,9 +134,9 @@ class CourtWorld(object):
 
     def throwBall(self, theta, force):
 
-        # tamanho da bola: 22px
-        ball_mass   = 9
-        ball_radius = 22
+                # tamanho da bola: 18px
+        ball_mass   = 10
+        ball_radius = 18
 
         self.theta      = theta
         self.force      = force
@@ -198,7 +212,7 @@ class CourtGame(object):
 
 
 testing  = True
-training = False
+training = True
 
 if testing:
     if training == False:
