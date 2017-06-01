@@ -22,7 +22,7 @@ class CourtWorld(object):
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
         self.classification = None
-        self.holographicBasket = False
+        self.holographicBasket = True
 
         self.makeCourt()
         self.makeBasket()
