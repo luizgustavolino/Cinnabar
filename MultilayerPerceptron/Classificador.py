@@ -23,7 +23,7 @@ class kFold(object):
         print " Considerando como class a coluna: " + self.csv.className + " (M="+str(classesCount)+")"
         print "--------------------------------------------------"
 
-        foldLimit = k
+        foldLimit = 1
         print "[ Considerando "+str(foldLimit)+" folds ]"
 
         bestLayout          = None
@@ -165,12 +165,12 @@ class kFold(object):
         #Controla se vai ler pesos do txt
         #Caso sim, nao treina a rede, apenas testa
         #Caso nao, rede treinada normalmente e novos pesos salvos em um arquivo
-        shouldReadFromFile  = True
+        shouldReadFromFile  = False
 
 
         mlp                 = MLP(layout, momentum, shouldReadFromFile)
         lastEAv             = None
-        threshold           = 0.001
+        threshold           = 0.00001
         numberOfTeachings   = 0
         rateOfError         = 1
         maxTeachings        = 200
@@ -180,7 +180,7 @@ class kFold(object):
         # Parada 1: taxa de erro menor que o gatilho
         # Parada 2: taxa de erro menor que 15%
         # Parada 3: atingiu o max de treinamentos
-        while (rateOfError > threshold or lastEAv > 0.15) and numberOfTeachings < maxTeachings and shouldReadFromFile == False:
+        while (rateOfError > threshold or lastEAv > 0.02) and numberOfTeachings < maxTeachings and shouldReadFromFile == False:
 
             numberOfTeachings += 1
             for sampleIndex in sample["S"]:
