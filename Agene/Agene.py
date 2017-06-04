@@ -8,9 +8,6 @@ court1 = CourtGame(960, 540)
 randomNumber = 0
 group = []
 matingPool = []
-mChance = 0.01
-iteration = 0
-popSize = 50
 
 #gera cromossomos com carga genetica aleatoria
 def initCromosomes(n):
@@ -52,7 +49,6 @@ def fitness():
 	   	
 	   	# print "angulo:", x[2],"forca:", x[3] ,court.classification
 
-
 #escolhe os pais de uma nova geracao, 
 #duvidas: a reproducao acontece ate termos numeros suficiente de filhos? 
 def naturalSelection():
@@ -64,7 +60,7 @@ def naturalSelection():
 	group[:] = []
 
 #cruza os dados geneticos de diterations cromossomos para gerar nova geracao 
-def crossover():
+def crossover(prob):
 	# randomNumber gera o valor que dira em que indice do cromossomo ocorrera a troca
 	for x in xrange(0, len(matingPool) * 2):
 		randomNumber = random.randint(1, len(matingPool[0]) - 1)
@@ -80,7 +76,7 @@ def crossover():
 		# 	matingPool[a][y] = matingPool[b][y]
 		# 	matingPool[b][y] = aux
 
-		if random.random() <= mChance:
+		if random.random() <= prob:
 			cromosome = []
 	 		for y in xrange(0, 5):
 	 			if y == 2:
@@ -96,18 +92,20 @@ def crossover():
 			else:
 				group.append(matingPool[b])
 
+def genetic(popSize, mutationChance, loopLimit = -1):
+	initCromosomes(popSize)
+	iteration = 0
+	# print group
+	while True:
+		fitness()
+		naturalSelection()
+		iteration += 1
+		if matingPool[0][4] == 0 or iteration == loopLimit:
+			print iteration
+			break
+		crossover(mutationChance)
 
-initCromosomes(popSize)
-# print group
+	court1.throwBall(matingPool[0][2] , matingPool[0][3])
+	court1.gameLoop()
 
-while True:
-	fitness()
-	naturalSelection()
-	iteration += 1
-	if matingPool[0][4] == 0 :
-		print iteration
-		break
-	crossover()
-
-court1.throwBall(matingPool[0][2] , matingPool[0][3])
-court1.gameLoop()
+genetic(10, 0.01)
