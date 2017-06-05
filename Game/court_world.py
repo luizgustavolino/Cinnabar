@@ -7,9 +7,11 @@ import pymunk
 import pymunk.pyglet_util
 from pymunk import Vec2d
 
+import engine
+
 class CourtWorld(object):
 
-    def __init__(self, sw, sh):
+    def __init__(self, sw, sh, training = True):
 
         self.sw = sw
         self.sh = sh
@@ -20,10 +22,13 @@ class CourtWorld(object):
         self.classification = None
         self.pointMade = None
         self.holographicBasket = False
-        self.drawOptions = None
-        self.unlinkTTL   = 0
+        self.drawOptions = None # debug da física
+        self.unlinkTTL   = 0  # tempo até a bola sumir
+        self.iron        = [] # shapes do aro
+        self.training = training
         self.makeCourt()
         self.makeBasket()
+
 
         ch = self.space.add_collision_handler(0, 0)
         ch.begin = self.processCollision
@@ -47,6 +52,10 @@ class CourtWorld(object):
                 self.classification = "acertou"
                 self.pointMade = True
                 return True
+
+            for ironShape in self.iron:
+                if shape == ironShape and self.training == False:
+                    engine.rumble = 3 + random.randint(0, 3)
 
             # Verifica se algum shape não é sensor (bola e cesta são)
             if shape.sensor == False:
@@ -116,6 +125,7 @@ class CourtWorld(object):
                 shape.elasticity = 0.95
                 shape.friction = 0.9
                 self.space.add(shape)
+                self.iron.append(shape)
 
         # Cria o fundo da cesta
         staticBody = self.space.static_body

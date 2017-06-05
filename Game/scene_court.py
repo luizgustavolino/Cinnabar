@@ -28,8 +28,10 @@ class CourtScene(cc.layer.Layer):
         self.iaScore     = 0
         self.state       = S_AGENE_PREP
 
+        self.player_ready = False
+
         super(CourtScene, self).__init__()
-        self.world = CourtWorld(sw, sh)
+        self.world = CourtWorld(sw, sh, False)
         self.ball_body = None
 
         city_image = pyglet.resource.image('imgs/city.png')
@@ -66,6 +68,7 @@ class CourtScene(cc.layer.Layer):
         self.arrow.anchor_x = -100
         self.arrow.rotation = -45
         self.arrow.position = 192+100,216
+        self.arrow.opacity  = 0
         self.add(self.arrow)
 
         self.schedule(self.step)
@@ -77,10 +80,24 @@ class CourtScene(cc.layer.Layer):
         self.ball_body = self.world.throwBall(theta, force)
 
     def playerPrep(self):
-        self.ball_sprite.stop()
-        self.ball_sprite.do(cc.actions.FadeTo(255, 0.2))
-        self.ball_body = None
-        self.ball_sprite.position = 192,216
+        if self.player_ready == False:
+            self.ball_sprite.stop()
+            self.ball_sprite.do(cc.actions.FadeTo(255, 0.2))
+            self.ball_body = None
+            self.ball_sprite.position = 192,216
+            self.arrow.stop()
+            self.arrow.do(cc.actions.FadeTo(200, 0.2))
+            self.player_ready = True
+
+    def throwButtonPressed(self):
+        if self.state == S_PLAYER_PREP:
+            theta = self.arrow.rotation * -1
+            force = 0.5 + engine.getStrengh()/2
+            self.ball_body = self.world.throwBall(theta,force)
+            self.state = S_PLAYER_SHOT
+            engine.throwButtonPressed = False
+            self.arrow.stop()
+            self.arrow.do(cc.actions.FadeTo(0, 0.1))
 
     def step(self, dt):
 
@@ -92,22 +109,45 @@ class CourtScene(cc.layer.Layer):
             if self.world.pointMade != None:
                 if self.world.pointMade == True:
                     self.iaScore += 1
-                self.world.unlinkBall(60 * 3) # 3s
+                self.world.unlinkBall(60 * 2) # 3s
                 self.ball_sprite.do(
-                    cc.actions.Delay(1.2) +
-                    cc.actions.FadeTo(0, 0.6)
+                    cc.actions.Delay(1.0) +
+                    cc.actions.FadeTo(0, 0.4)
                 )
                 self.state = S_PLAYER_WAITING_COURT
 
         elif self.state == S_PLAYER_WAITING_COURT:
             if self.world.ready() == True:
+                self.player_ready = False
                 self.state = S_PLAYER_PREP
 
         elif self.state == S_PLAYER_PREP:
             self.playerPrep()
+            if engine.throwButtonPressed == True:
+                self.throwButtonPressed()
+
+        elif self.state == S_PLAYER_SHOT:
+            if self.world.pointMade != None:
+                if self.world.pointMade == True:
+                    self.playerScore += 1
+                self.world.unlinkBall(60 * 2) # 3s
+                self.ball_sprite.do(
+                    cc.actions.Delay(1.0) +
+                    cc.actions.FadeTo(0, 0.4)
+                )
+                self.state = S_AGENE_WAITING_COURT
+
+        elif self.state == S_AGENE_WAITING_COURT:
+            if self.world.ready() == True:
+                self.state = S_AGENE_PREP
 
         self.world.step()
-        self.arrow.rotation += 1
+
+        rawRotation = engine.getPitch() * 1.1
+        if rawRotation > -10: rawRotation = -10
+        if rawRotation < -70: rawRotation = -70
+        self.arrow.rotation = rawRotation
+        self.arrow.scale = 0.5 + engine.getStrengh()/2.0
 
         if self.ball_body != None:
             self.ball_sprite.position = self.ball_body.position
@@ -123,3 +163,11 @@ class CourtScene(cc.layer.Layer):
             op = (self.ball_sprite.opacity/2) - 100
             if op < 0: op = 0
             self.ball_shadow_sprite.opacity  = op 
+
+        if engine.rumble > 1:
+            engine.wiimote.enable_rumble(1)
+            engine.rumble -= 1
+        elif engine.rumble == 1:
+            engine.wiimote.enable_rumble(0)
+            engine.rumble -= 1
+

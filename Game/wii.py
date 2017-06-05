@@ -6,7 +6,7 @@
 
 from threading import Thread
 from Queue import Queue, Empty
-import time
+import time, engine
 
 wiiuse = None 
 
@@ -67,15 +67,17 @@ class wiimote_thread(Thread):
         if wm.btns:
             for name,b in wiiuse.button.items():
                 if wiiuse.is_just_pressed(wm, b):
-                    print "press", name 
+                    if name == "A":
+                        engine.throwButtonPressed = True
+                if wiiuse.is_pressed(wm, b):
+                    if name == "Up":
+                        if engine.strengh < 1.0:
+                            engine.strengh += 0.01
+                    if name == "Down":
+                        if engine.strengh > 0.0:
+                            engine.strengh -= 0.01
 
-        if wm.btns_released:
-            for name,b in wiiuse.button.items():
-                if wiiuse.is_released(wm, b):
-                    print "release", name
-
-        print "acell", wm.orient.pitch
-
+        engine.appendPitch(wm.orient.pitch)
 
     def quit(self):
         for i in range(self.nmotes):
