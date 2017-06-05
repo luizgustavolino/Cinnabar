@@ -103,7 +103,6 @@ def genetic(popSize, mutationChance, loopLimit = -1):
 		iteration += 1
 
 		if matingPool[0][4] == 0 or iteration == loopLimit:
-			print iteration
 			break
 		crossover(mutationChance)
 

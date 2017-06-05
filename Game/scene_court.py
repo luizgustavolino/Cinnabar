@@ -8,6 +8,13 @@ from cocos.sprite import Sprite
 from court_world import CourtWorld
 import engine 
 
+S_AGENE_PREP                = 1
+S_AGENE_SHOT                = 2
+S_PLAYER_WAITING_COURT      = 3
+S_PLAYER_PREP               = 4
+S_PLAYER_SHOT               = 5
+S_AGENE_WAITING_COURT       = 6
+
 class CourtScene(cc.layer.Layer):
 
     def __init__(self):
@@ -16,6 +23,10 @@ class CourtScene(cc.layer.Layer):
         sh = 540
         hsw = 480
         hsh = 270
+
+        self.playerScore = 0
+        self.iaScore     = 0
+        self.state       = S_AGENE_PREP
 
         super(CourtScene, self).__init__()
         self.world = CourtWorld(sw, sh)
@@ -45,19 +56,33 @@ class CourtScene(cc.layer.Layer):
         court_fg_sprite = Sprite(cout_fg_image)
         court_fg_sprite.position = hsw,hsh
         self.add(court_fg_sprite)
-
-        self.world.linkDebugDraw()
         self.schedule(self.step)
-        self.ageneShot()
+        
 
     def ageneShot(self):
-        theta, force = engine.findBestShot(15)
+        theta, force = engine.findBestShot(20)
         self.ball_body = self.world.throwBall(theta, force)
 
     def step(self, dt):
-        
+
+        if self.state == S_AGENE_PREP:
+            self.ageneShot()
+            self.state = S_AGENE_SHOT
+            
+        elif self.state == S_AGENE_SHOT:
+            if self.world.pointMade != None:
+                if self.world.pointMade == True:
+                    self.iaScore += 1
+                self.world.unlinkBall(60 * 3) # 3s
+                self.state = S_PLAYER_WAITING_COURT
+
+        elif self.state == S_PLAYER_WAITING_COURT:
+            if self.world.ready() == True:
+                self.state = S_AGENE_PREP
+
+
         self.world.step()
 
         if self.ball_body != None:
             self.ball_sprite.position = self.ball_body.position
-            self.ball_sprite.rotation = math.degrees(2 * 3.14 - self.ball_body.angle)
+            self.ball_sprite.rotation = math.degrees(2 * 3.1415 - self.ball_body.angle)

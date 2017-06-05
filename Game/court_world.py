@@ -18,8 +18,10 @@ class CourtWorld(object):
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
         self.classification = None
+        self.pointMade = None
         self.holographicBasket = False
         self.drawOptions = None
+        self.unlinkTTL   = 0
         self.makeCourt()
         self.makeBasket()
 
@@ -28,7 +30,7 @@ class CourtWorld(object):
 
     def processCollision(self, arbiter, space, data):
 
-        if self.classification != None:
+        if self.pointMade != None:
             return True
 
         hitPoint = True
@@ -37,6 +39,13 @@ class CourtWorld(object):
             # Verifica se tocou o chão
             if shape == self.floor:
                 self.classification = "longe"
+                self.pointMade = False
+                return True
+
+            # Verifica se tocou a cesta
+            if shape == self.point_line:
+                self.classification = "acertou"
+                self.pointMade = True
                 return True
 
             # Verifica se algum shape não é sensor (bola e cesta são)
@@ -48,6 +57,7 @@ class CourtWorld(object):
 
             # Acha o shape que é nossa bola
             for shape in arbiter.shapes:
+
                 if shape.body == self.currentBall and shape.body.velocity.y < 0:
 
                     deltaDistance = abs(self.currentBall.position.x - self.basketCenter)
@@ -73,6 +83,7 @@ class CourtWorld(object):
     def step(self):
         dt = 1.0/80.0
         self.space.step(dt)
+        self.checkUnlink()
 
     def makeCourt(self):
 
@@ -80,8 +91,11 @@ class CourtWorld(object):
         staticBody = self.space.static_body
         self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 115), 0.0)
         segments.append(self.floor)
+
         segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
+        segments.append(pymunk.Segment(staticBody, (759, 310), (759+4, 310-25), 0.0))
+        segments.append(pymunk.Segment(staticBody, (759+50, 310), (759+50-4, 310-25), 0.0))
 
         for segment in segments:
             segment.elasticity  = 0.60
@@ -116,14 +130,42 @@ class CourtWorld(object):
         backboard.friction = 0.9
         self.space.add(backboard)
 
-        # Cria o sensor para marcar ponto
+        # Cria o sensor para classificar
         staticBody = self.space.static_body
-        line =  pymunk.Segment(staticBody,
+        self.basket_line =  pymunk.Segment(staticBody,
             (0, 310 ),
             (self.sw*2, 310), 0.0)
-        line.sensor = True
+        self.basket_line.sensor = True
         self.basketCenter = 759 + size/2
-        self.space.add(line)
+        self.space.add(self.basket_line)
+
+        # Cria o sensor para marcar ponto
+        staticBody = self.space.static_body
+        self.point_line =  pymunk.Segment(staticBody,
+            (759+6, 308-20),
+            (809-6, 308-20), 0.0)
+        self.point_line.sensor = True
+        self.space.add(self.point_line)
+
+    def ready(self):
+        return self.unlinkTTL == 0
+
+    def unlinkBall(self, ttl = 1):
+        self.unlinkTTL = ttl
+
+    def checkUnlink(self):
+
+        if self.unlinkTTL == 0:
+            return
+
+        elif self.unlinkTTL == 1:
+            if self.currentBall != None:
+                self.space.remove(self.currentBall)
+                self.space.remove(self.currentBallShape)
+                self.space.remove(self.currentBallSprite)
+                self.currentBall = None
+
+        self.unlinkTTL -= 1
 
     def throwRandomBall(self):
         return self.throwBall( 45, 0.5 + random.random()/2)
@@ -137,6 +179,7 @@ class CourtWorld(object):
         self.theta      = theta
         self.force      = force
         self.success    = False
+        self.pointMade  = None
 
         #decomposição vetorial
         force = force * self.sw * 720
@@ -157,6 +200,8 @@ class CourtWorld(object):
         # Posicionamos e aplicamos a força
         body.position = self.sw*0.2, self.sh*0.4
         self.currentBall = body
+        self.currentBallShape = collision_shape
+        self.currentBallSprite = sprite_shape
         self.space.add(body, sprite_shape, collision_shape)
         body.apply_force_at_local_point( (fx, fy), (0,0))
 

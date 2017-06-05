@@ -22,8 +22,8 @@ class CourtWorld(object):
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
         self.classification = None
-        self.holographicBasket = True
-
+        self.holographicBasket = False
+        self.drawOptions = None
         self.makeCourt()
         self.makeBasket()
 
@@ -65,32 +65,37 @@ class CourtWorld(object):
                     else:
                         self.classification = "longe"
 
+                    print self.classification
+
         return True
 
     def linkDebugDraw(self, screen):
-        self.drawOptions = pymunk.pygame_util.DrawOptions(screen)
+        if self.drawOptions == None:
+            self.drawOptions = pymunk.pygame_util.DrawOptions(screen)
 
     def debugDraw(self):
         self.space.debug_draw(self.drawOptions)
 
     def step(self):
-        dt = 1.0/60.0
+        dt = 1.0/80.0
         self.space.step(dt)
 
     def makeCourt(self):
 
         segments = []
         staticBody = self.space.static_body
-        self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 120), 0.0)
+        self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 115), 0.0)
         segments.append(self.floor)
         segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
 
-        for segment in segments:
-            segment.elasticity = 0.95
-            segment.friction = 0.9
-            self.space.add(segment)
+        segments.append(pymunk.Segment(staticBody, (759, 310), (759+4, 310-25), 0.0))
+        segments.append(pymunk.Segment(staticBody, (759+50, 310), (759+50-4, 310-25), 0.0))
 
+        for segment in segments:
+            segment.elasticity  = 0.50
+            segment.friction    = 0.90
+            self.space.add(segment)
 
     def makeBasket(self):
         # Cesta = dois circulos, corte vertical do aro
@@ -123,18 +128,18 @@ class CourtWorld(object):
         # Cria o sensor para marcar ponto
         staticBody = self.space.static_body
         line =  pymunk.Segment(staticBody,
-            (0, 310 ),
-            (self.sw*2, 310), 0.0)
+            (759+6, 308-20),
+            (809-6, 308-20), 0.0)
         line.sensor = True
         self.basketCenter = 759 + size/2
         self.space.add(line)
 
     def throwRandomBall(self):
-        self.throwBall( 45, 0.5 + random.random()/2)
+        return self.throwBall( 45, 0.5 + random.random()/2)
 
     def throwBall(self, theta, force):
 
-                # tamanho da bola: 18px
+        # tamanho da bola: 18px
         ball_mass   = 10
         ball_radius = 18
 
@@ -164,6 +169,8 @@ class CourtWorld(object):
         self.space.add(body, sprite_shape, collision_shape)
         body.apply_force_at_local_point( (fx, fy), (0,0))
 
+        return body
+
 class CourtGame(object):
 
     def __init__(self, sw, sh):
@@ -176,8 +183,7 @@ class CourtGame(object):
 
         print "Current res: " + str(self.sw) + " x " + str(self.sh)
 
-        self.screen = pygame.display.set_mode((self.sw, self.sh),
-                        pygame.DOUBLEBUF | pygame.FULLSCREEN)
+        self.screen = pygame.display.set_mode((self.sw, self.sh), pygame.DOUBLEBUF)
 
         self.running = True
         self.clock = pygame.time.Clock()
@@ -211,7 +217,7 @@ class CourtGame(object):
             self.clock.tick(60)
 
 
-testing  = True
+testing  = False
 training = True
 
 if testing:

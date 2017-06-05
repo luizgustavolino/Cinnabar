@@ -108,4 +108,4 @@ def genetic(popSize, mutationChance, loopLimit = -1):
 	court1.throwBall(matingPool[0][2] , matingPool[0][3])
 	court1.gameLoop()
 
-genetic(10, 0.01)
+genetic(800, 0.01, 5)
