@@ -63,9 +63,9 @@ class CourtScene(cc.layer.Layer):
         self.add(court_fg_sprite)
         
         self.arrow = Sprite(pyglet.resource.image('imgs/arrow.png'))
-        self.arrow.position = self.ball_sprite.position
-        self.arrow.anchor_y = -100
-        self.arrow.rotation = 45
+        self.arrow.anchor_x = -100
+        self.arrow.rotation = -45
+        self.arrow.position = 192+100,216
         self.add(self.arrow)
 
         self.schedule(self.step)
@@ -75,6 +75,12 @@ class CourtScene(cc.layer.Layer):
         self.ball_sprite.stop()
         self.ball_sprite.do(cc.actions.FadeTo(255, 0.2))
         self.ball_body = self.world.throwBall(theta, force)
+
+    def playerPrep(self):
+        self.ball_sprite.stop()
+        self.ball_sprite.do(cc.actions.FadeTo(255, 0.2))
+        self.ball_body = None
+        self.ball_sprite.position = 192,216
 
     def step(self, dt):
 
@@ -95,8 +101,10 @@ class CourtScene(cc.layer.Layer):
 
         elif self.state == S_PLAYER_WAITING_COURT:
             if self.world.ready() == True:
-                self.state = S_AGENE_PREP
+                self.state = S_PLAYER_PREP
 
+        elif self.state == S_PLAYER_PREP:
+            self.playerPrep()
 
         self.world.step()
         self.arrow.rotation += 1
