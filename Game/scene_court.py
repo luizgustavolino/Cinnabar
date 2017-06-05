@@ -49,20 +49,26 @@ class CourtScene(cc.layer.Layer):
 
         self.ball_shadow_image = pyglet.resource.image('imgs/shadow.png')
         self.ball_shadow_sprite = Sprite(self.ball_shadow_image)
-        self.ball_shadow_sprite.position = 100,115
+        self.ball_shadow_sprite.position = 192,115
         self.add(self.ball_shadow_sprite)
 
         self.ball_image = pyglet.resource.image('imgs/ball.png')
         self.ball_sprite = Sprite(self.ball_image)
-        self.ball_sprite.position = 100,100
+        self.ball_sprite.position = 192,216
         self.add(self.ball_sprite)
 
         cout_fg_image = pyglet.resource.image('imgs/court_fg.png')
         court_fg_sprite = Sprite(cout_fg_image)
         court_fg_sprite.position = hsw,hsh
         self.add(court_fg_sprite)
-        self.schedule(self.step)
         
+        self.arrow = Sprite(pyglet.resource.image('imgs/arrow.png'))
+        self.arrow.position = self.ball_sprite.position
+        self.arrow.anchor_y = -100
+        self.arrow.rotation = 45
+        self.add(self.arrow)
+
+        self.schedule(self.step)
 
     def ageneShot(self):
         theta, force = engine.findBestShot(20)
@@ -93,6 +99,7 @@ class CourtScene(cc.layer.Layer):
 
 
         self.world.step()
+        self.arrow.rotation += 1
 
         if self.ball_body != None:
             self.ball_sprite.position = self.ball_body.position
@@ -100,7 +107,7 @@ class CourtScene(cc.layer.Layer):
             
             px, py = self.ball_sprite.position
             dx = (py - 132) / 10
-            self.ball_shadow_sprite.position = (px - dx, 115)
+            self.ball_shadow_sprite.position = (px - dx, 112)
 
             sc = py/500
             self.ball_shadow_sprite.scale    = 0.3 + sc
