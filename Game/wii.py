@@ -1,75 +1,156 @@
-'''Test thw wiimote extension for pygame
+"""
+- WIIMote Thread
+- Projeto Cinnabar, BCC SENAC 2017
+- Baseado na implementacao de Gary Bishop, 2008
+"""
 
-I stole the graphing from wiiewer and then hacked it to work without Numeric
-
-'''
-
-import pygame
-import wiiuse.pygame_wiimote as pygame_wiimote
-import sys
+from threading import Thread
+from Queue import Queue, Empty
 import time
-import os
 
-pygame.init()
+wiiuse = None 
 
-# initialze the wiimotes
-if os.name != 'nt': print 'press 1&2'
-pygame_wiimote.init(1, 5) # look for 1, wait 5 seconds
-n = pygame_wiimote.get_count() # how many did we get?
+class wiimote_thread(Thread):
+   
+    def __init__(self, nmotes=1, timeout=5):
 
-if n == 0:
-    print 'no wiimotes found'
-    sys.exit(1)
+        Thread.__init__(self, name='wiimote')
 
-w,h = size = (512,512)
+        self.queue = Queue()
+        self.startup = Queue()
+        self.nmotes = nmotes
+        self.timeout = timeout
+        self.setDaemon(1)
+        self.start()
+        self.startup.get(True) 
 
-wm = pygame_wiimote.Wiimote(0) # access the wiimote object
-wm.enable_accels(1) # turn on acceleration reporting
-wm.enable_ir(1, vres=size) # turn on ir reporting
+    def run(self):
 
-screen = pygame.display.set_mode(size)
+        global wiiuse
+        import wiiuse
+        
+        self.wiimotes = wiiuse.init(self.nmotes)
+        found = wiiuse.find(self.wiimotes, self.nmotes, self.timeout)
+        self.actual_nmotes = wiiuse.connect(self.wiimotes, self.nmotes)
 
-run = True
+        for i in range(self.nmotes):
+            wiiuse.set_leds(self.wiimotes[i], wiiuse.LED[i])
 
-old = [h/2] * 6
-maxA = 2.0
+        self.go = self.actual_nmotes != 0
 
-colors = [ (255,0,0), (0,255,0), (0,0,255), (255,255,0), (255, 0, 255), (0,255,255) ]
+        self.startup.put(self.go)
 
-while run:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            print 'quiting'
-            run = False
-            break
-        elif event.type in [ pygame_wiimote.WIIMOTE_BUTTON_PRESS,
-                             pygame_wiimote.NUNCHUK_BUTTON_PRESS ]:
-            print event.button, 'pressed on', event.id
-        elif event.type in [ pygame_wiimote.WIIMOTE_BUTTON_RELEASE,
-                             pygame_wiimote.NUNCHUK_BUTTON_RELEASE ]:
-            print event.button, 'released on', event.id
-        elif event.type in [ pygame_wiimote.WIIMOTE_ACCEL, pygame_wiimote.NUNCHUK_ACCEL ]:
-            if event.type == pygame_wiimote.WIIMOTE_ACCEL:
-                b = 0
+        while self.go:
+            try:
+                if wiiuse.poll(self.wiimotes, self.nmotes):
+                    for i in range(self.nmotes):
+                        wm = self.wiimotes[i][0]
+                        if wm.event:
+                            self.event_cb(wm)
+
+            except Exception as error: 
+                print error
+                self.quit()
+
+            while True:
+                try:
+                    func, args = self.queue.get_nowait()
+                except Empty:
+                    break
+                func(*args)
+
+    def do(self, func, *args):
+        self.queue.put((func, args))
+
+    def event_cb(self, wm):
+
+        if wm.btns:
+            for name,b in wiiuse.button.items():
+                if wiiuse.is_just_pressed(wm, b):
+                    print "press", name 
+
+        if wm.btns_released:
+            for name,b in wiiuse.button.items():
+                if wiiuse.is_released(wm, b):
+                    print "release", name
+
+        print "acell", wm.orient.pitch
+
+
+    def quit(self):
+        for i in range(self.nmotes):
+            wiiuse.set_leds(self.wiimotes[i], 0)
+            wiiuse.disconnect(self.wiimotes[i])
+        self.go = False
+
+WT = None
+
+def init(nmotes, timeout):
+
+    global WT
+    if WT:
+        return
+    WT = wiimote_thread(nmotes, timeout)
+
+def get_count():
+    return WT.actual_nmotes
+
+def quit():
+    WT.quit()
+    WT.join()
+
+class wiimote(object):
+
+    def __init__(self, n):
+        self.wm = WT.wiimotes[n]
+
+    def enable_leds(self, m):
+        WT.do(wiiuse.set_leds, self.wm, sum([wiiuse.LED[i] for i in range(4) if m & (1<<i)]))
+
+    def enable_rumble(self, on):
+        WT.do(wiiuse.rumble, self.wm, on)
+
+    def enable_accels(self, on):
+        WT.do(wiiuse.motion_sensing, self.wm, on)
+
+    def enable_ir(self, on, vres=None, position=None, aspect=None):
+        WT.do(wiiuse.set_ir, self.wm, on)
+        if vres is not None:
+            WT.do(wiiuse.set_ir_vres, self.wm, vres[0], vres[1])
+        if position is not None:
+            WT.do(wiiuse.set_ir_position, self.wm, position)
+        if aspect is not None:
+            WT.do(wiiuse.set_aspect_ratio, self.wm, aspect)
+
+    def set_flags(self, smoothing=None, continuous=None, threshold=None):
+        enable = disable = 0
+        if smoothing is not None:
+            if smoothing:
+                enable |= wiiuse.SMOOTHING
             else:
-                b = 3
-            for c in range(3):
-                s = int((event.accel[c] * h / maxA + h)/2)
-                s = max(0, min(h-1, s))
-                pygame.draw.line(screen, colors[b+c], (w-3, old[b+c]), (w-2, s))
-                old[b+c] = s
-            screen.blit(screen, (-1, 0))
-        elif event.type == pygame_wiimote.WIIMOTE_STATUS:
-            print 'status', event.dict
-        elif event.type == pygame_wiimote.WIIMOTE_DISCONNECT:
-            print 'disconnected'
-            run = False
-            break
-        elif event.type == pygame_wiimote.WIIMOTE_IR:
-            pygame.draw.circle(screen, colors[5], event.cursor[:2], 10)
+                disable |= wiiuse.SMOOTHING
+        if continuous is not None:
+            if continuous:
+                enable |= wiiuse.CONTINUOUS
+            else:
+                disable |= wiiuse.CONTINUOUS
+        if threshold is not None:
+            if threshold:
+                enable |= wiiuse.ORIENT_THRESH
+            else:
+                disable |= wiiuse.ORIENT_THRESH
+        print enable, disable
+        WT.do(wiiuse.set_flags, self.wm, enable, disable)
 
-    pygame.display.flip()
-    pygame.time.wait(10)
-pygame_wiimote.quit()
+    def set_orient_thresh(self, thresh):
+        WT.do(wiiuse.set_orient_threshold, self.wm, thresh)
 
+    def status(self):
+        WT.do(wiiuse.status, self.wm)
+
+    def disconnect(self):
+        WT.do(wiiuse.disconnect(self.wm))
+
+def Wiimote(n):
+    return wiimote(n)
 
