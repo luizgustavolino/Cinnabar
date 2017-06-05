@@ -73,6 +73,7 @@ class CourtScene(cc.layer.Layer):
         self.add(self.arrow)
 
         self.underHud = Sprite(pyglet.resource.image('imgs/hud.png'))
+        self.underHud.position = hsw,hsh
         self.add(self.underHud)
 
         self.coach = Sprite(pyglet.resource.image('imgs/seu_mlp.png'))
@@ -89,9 +90,25 @@ class CourtScene(cc.layer.Layer):
 
         for item in self.hints:
             self.hints[item].scale      = 0.25
-            self.hints[item].position   = (135, 32)
+            self.hints[item].position   = (165, 42)
             self.hints[item].opacity    = 0
             self.add(self.hints[item])
+
+        self.playerLabel = cc.text.Label('0',
+                                 font_name='Cantarell',
+                                 font_size=25,
+                                 anchor_x='center',
+                                 anchor_y='center')
+        self.playerLabel.position = (480 - 45, 25)
+        self.add(self.playerLabel)
+
+        self.iaLabel = cc.text.Label('0',
+                                 font_name='Cantarell',
+                                 font_size=25,
+                                 anchor_x='center',
+                                 anchor_y='center')
+        self.iaLabel.position = (480 + 45, 25)
+        self.add(self.iaLabel)
 
         self.changeMLPTo("agene")
         self.schedule(self.step)
@@ -100,10 +117,7 @@ class CourtScene(cc.layer.Layer):
         for item in self.hints:
             if item == name:
                 self.hints[item].stop()
-                self.hints[item].do(
-                    cc.actions.FadeTo(255, 0.1) + 
-                    cc.actions.JumpTo((135, 32), 10, 0, duration=0.2)
-                )
+                self.hints[item].do(cc.actions.FadeTo(255, 0.1))
             else:
                 self.hints[item].stop()
                 self.hints[item].do(cc.actions.FadeTo(0, 0.1))
@@ -157,6 +171,8 @@ class CourtScene(cc.layer.Layer):
             if self.world.pointMade != None:
                 if self.world.pointMade == True:
                     self.iaScore += 1
+                    self.iaLabel.element.text = str(self.iaScore)
+                    print str(self.iaScore)
                 self.world.unlinkBall(60 * 2) # 3s
                 self.ball_sprite.do(
                     cc.actions.Delay(1.0) +
@@ -182,6 +198,8 @@ class CourtScene(cc.layer.Layer):
             if self.world.pointMade != None:
                 if self.world.pointMade == True:
                     self.playerScore += 1
+                    self.playerLabel.element.text = str(self.playerScore)
+                    print str(self.playerScore)
                 self.world.unlinkBall(60 * 2) # 3s
                 self.ball_sprite.do(
                     cc.actions.Delay(1.0) +
