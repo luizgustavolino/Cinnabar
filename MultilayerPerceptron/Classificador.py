@@ -170,7 +170,7 @@ class kFold(object):
 
         mlp                 = MLP(layout, momentum, shouldReadFromFile)
         lastEAv             = None
-        threshold           = 0.00001
+        threshold           = 0.0001
         numberOfTeachings   = 0
         rateOfError         = 1
         maxTeachings        = 200
@@ -180,7 +180,7 @@ class kFold(object):
         # Parada 1: taxa de erro menor que o gatilho
         # Parada 2: taxa de erro menor que 15%
         # Parada 3: atingiu o max de treinamentos
-        while (rateOfError > threshold or lastEAv > 0.02) and numberOfTeachings < maxTeachings and shouldReadFromFile == False:
+        while (rateOfError > threshold or lastEAv > 0.08) and numberOfTeachings < maxTeachings and shouldReadFromFile == False:
 
             numberOfTeachings += 1
             for sampleIndex in sample["S"]:

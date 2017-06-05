@@ -72,6 +72,9 @@ class CourtScene(cc.layer.Layer):
         self.arrow.opacity  = 0
         self.add(self.arrow)
 
+        self.underHud = Sprite(pyglet.resource.image('imgs/hud.png'))
+        self.add(self.underHud)
+
         self.coach = Sprite(pyglet.resource.image('imgs/seu_mlp.png'))
         self.coach.scale = 0.3
         self.coach.position = (56, 48)
@@ -106,14 +109,11 @@ class CourtScene(cc.layer.Layer):
                 self.hints[item].do(cc.actions.FadeTo(0, 0.1))
 
     def checkWithMLP(self):
+        
         theta = self.arrow.rotation * -1
         force = 0.5 + engine.getStrengh()/2
+        k = engine.predictionForShot(theta/90, force)
 
-        if force > 0.8: force = 0.8
-        if force < 0.5: force = 0.5
-        force = (force - 0.5) * 3.33333
-
-        k = engine.predictionForShot((theta-10)/80, force)
         if k == engine.LONGE: self.changeMLPTo("longe")
         elif k == engine.PERTO: self.changeMLPTo("perto")
         elif k == engine.MUITO_PERTO: self.changeMLPTo("perto")

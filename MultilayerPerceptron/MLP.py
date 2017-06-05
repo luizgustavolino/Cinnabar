@@ -11,6 +11,7 @@ class MLP (object):
         # de neuronios do layout (vetor de ints)
 
         #print "Criando MLP, layout:" + str(layout)
+        shouldReadFromFile = False
 
         self.layers  = [] # layers[0]  -> input layer, demais são hidden layers
         self.outputs = []

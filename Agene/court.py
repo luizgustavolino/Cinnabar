@@ -11,9 +11,11 @@ import pymunk
 import pymunk.pygame_util
 from pymunk import Vec2d
 
+
+
 class CourtWorld(object):
 
-    def __init__(self, sw, sh):
+    def __init__(self, sw, sh, training = True):
 
         self.sw = sw
         self.sh = sh
@@ -22,17 +24,22 @@ class CourtWorld(object):
         self.space = pymunk.Space()
         self.space.gravity = (0.0, self.gravity * (-100))
         self.classification = None
+        self.pointMade = None
         self.holographicBasket = False
-        self.drawOptions = None
+        self.drawOptions = None # debug da física
+        self.unlinkTTL   = 0  # tempo até a bola sumir
+        self.iron        = [] # shapes do aro
+        self.training = training
         self.makeCourt()
         self.makeBasket()
+
 
         ch = self.space.add_collision_handler(0, 0)
         ch.begin = self.processCollision
 
     def processCollision(self, arbiter, space, data):
 
-        if self.classification != None:
+        if self.pointMade != None:
             return True
 
         hitPoint = True
@@ -41,7 +48,18 @@ class CourtWorld(object):
             # Verifica se tocou o chão
             if shape == self.floor:
                 self.classification = "longe"
+                self.pointMade = False
                 return True
+
+            # Verifica se tocou a cesta
+            if shape == self.point_line:
+                self.classification = "acertou"
+                self.pointMade = True
+                return True
+
+            for ironShape in self.iron:
+                if shape == ironShape and self.training == False:
+                    engine.rumble = 3 + random.randint(0, 3)
 
             # Verifica se algum shape não é sensor (bola e cesta são)
             if shape.sensor == False:
@@ -52,6 +70,7 @@ class CourtWorld(object):
 
             # Acha o shape que é nossa bola
             for shape in arbiter.shapes:
+
                 if shape.body == self.currentBall and shape.body.velocity.y < 0:
 
                     deltaDistance = abs(self.currentBall.position.x - self.basketCenter)
@@ -65,13 +84,11 @@ class CourtWorld(object):
                     else:
                         self.classification = "longe"
 
-                    print self.classification
-
         return True
 
-    def linkDebugDraw(self, screen):
+    def linkDebugDraw(self):
         if self.drawOptions == None:
-            self.drawOptions = pymunk.pygame_util.DrawOptions(screen)
+            self.drawOptions = pymunk.pyglet_util.DrawOptions()
 
     def debugDraw(self):
         self.space.debug_draw(self.drawOptions)
@@ -79,6 +96,7 @@ class CourtWorld(object):
     def step(self):
         dt = 1.0/80.0
         self.space.step(dt)
+        self.checkUnlink()
 
     def makeCourt(self):
 
@@ -86,14 +104,14 @@ class CourtWorld(object):
         staticBody = self.space.static_body
         self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 115), 0.0)
         segments.append(self.floor)
+
         segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
-
         segments.append(pymunk.Segment(staticBody, (759, 310), (759+4, 310-25), 0.0))
         segments.append(pymunk.Segment(staticBody, (759+50, 310), (759+50-4, 310-25), 0.0))
 
         for segment in segments:
-            segment.elasticity  = 0.50
+            segment.elasticity  = 0.60
             segment.friction    = 0.90
             self.space.add(segment)
 
@@ -111,6 +129,7 @@ class CourtWorld(object):
                 shape.elasticity = 0.95
                 shape.friction = 0.9
                 self.space.add(shape)
+                self.iron.append(shape)
 
         # Cria o fundo da cesta
         staticBody = self.space.static_body
@@ -125,14 +144,42 @@ class CourtWorld(object):
         backboard.friction = 0.9
         self.space.add(backboard)
 
+        # Cria o sensor para classificar
+        staticBody = self.space.static_body
+        self.basket_line =  pymunk.Segment(staticBody,
+            (0, 310 ),
+            (self.sw*2, 310), 0.0)
+        self.basket_line.sensor = True
+        self.basketCenter = 759 + size/2
+        self.space.add(self.basket_line)
+
         # Cria o sensor para marcar ponto
         staticBody = self.space.static_body
-        line =  pymunk.Segment(staticBody,
+        self.point_line =  pymunk.Segment(staticBody,
             (759+6, 308-20),
             (809-6, 308-20), 0.0)
-        line.sensor = True
-        self.basketCenter = 759 + size/2
-        self.space.add(line)
+        self.point_line.sensor = True
+        self.space.add(self.point_line)
+
+    def ready(self):
+        return self.unlinkTTL == 0
+
+    def unlinkBall(self, ttl = 1):
+        self.unlinkTTL = ttl
+
+    def checkUnlink(self):
+
+        if self.unlinkTTL == 0:
+            return
+
+        elif self.unlinkTTL == 1:
+            if self.currentBall != None:
+                self.space.remove(self.currentBall)
+                self.space.remove(self.currentBallShape)
+                self.space.remove(self.currentBallSprite)
+                self.currentBall = None
+
+        self.unlinkTTL -= 1
 
     def throwRandomBall(self):
         return self.throwBall( 45, 0.5 + random.random()/2)
@@ -146,6 +193,7 @@ class CourtWorld(object):
         self.theta      = theta
         self.force      = force
         self.success    = False
+        self.pointMade  = None
 
         #decomposição vetorial
         force = force * self.sw * 720
@@ -166,10 +214,13 @@ class CourtWorld(object):
         # Posicionamos e aplicamos a força
         body.position = self.sw*0.2, self.sh*0.4
         self.currentBall = body
+        self.currentBallShape = collision_shape
+        self.currentBallSprite = sprite_shape
         self.space.add(body, sprite_shape, collision_shape)
         body.apply_force_at_local_point( (fx, fy), (0,0))
 
         return body
+
 
 class CourtGame(object):
 
@@ -217,7 +268,7 @@ class CourtGame(object):
             self.clock.tick(60)
 
 
-testing  = False
+testing  = True
 training = True
 
 if testing:
@@ -229,8 +280,8 @@ if testing:
 
     else:
 
-        for dtheta in range(10,80):
-            for df in range(500,800):
+        for dtheta in range(0, 90):
+            for df in range(0, 1000):
 
                 court = CourtWorld(960, 540)
                 ff = df/1000.0
@@ -239,6 +290,6 @@ if testing:
                 while court.classification == None:
                     court.step()
 
-                normTheta = (dtheta-10.0)/70.0
-                normff    = ((df - 500.0)/300)
+                normTheta = dtheta / 90.0
+                normff    = ff
                 print str(normTheta) + ";" + str(normff) + ";" + str(court.classification)
