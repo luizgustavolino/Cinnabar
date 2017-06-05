@@ -24,6 +24,7 @@ class CourtScene(cc.layer.Layer):
         hsw = 480
         hsh = 270
 
+        self.frame       = 0
         self.playerScore = 0
         self.iaScore     = 0
         self.state       = S_AGENE_PREP
@@ -71,7 +72,52 @@ class CourtScene(cc.layer.Layer):
         self.arrow.opacity  = 0
         self.add(self.arrow)
 
+        self.coach = Sprite(pyglet.resource.image('imgs/seu_mlp.png'))
+        self.coach.scale = 0.3
+        self.coach.position = (56, 48)
+        self.add(self.coach)
+
+        self.hints = {}
+
+        self.hints["acertou"] = Sprite(pyglet.resource.image('imgs/hint-acertou.png'))
+        self.hints["longe"] = Sprite(pyglet.resource.image('imgs/hint-longe.png'))
+        self.hints["perto"] = Sprite(pyglet.resource.image('imgs/hint-perto.png'))
+        self.hints["agene"] = Sprite(pyglet.resource.image('imgs/hint-agene.png'))
+
+        for item in self.hints:
+            self.hints[item].scale      = 0.25
+            self.hints[item].position   = (135, 32)
+            self.hints[item].opacity    = 0
+            self.add(self.hints[item])
+
+        self.changeMLPTo("agene")
         self.schedule(self.step)
+
+    def changeMLPTo(self, name):
+        for item in self.hints:
+            if item == name:
+                self.hints[item].stop()
+                self.hints[item].do(
+                    cc.actions.FadeTo(255, 0.1) + 
+                    cc.actions.JumpTo((135, 32), 10, 0, duration=0.2)
+                )
+            else:
+                self.hints[item].stop()
+                self.hints[item].do(cc.actions.FadeTo(0, 0.1))
+
+    def checkWithMLP(self):
+        theta = self.arrow.rotation * -1
+        force = 0.5 + engine.getStrengh()/2
+
+        if force > 0.8: force = 0.8
+        if force < 0.5: force = 0.5
+        force = (force - 0.5) * 3.33333
+
+        k = engine.predictionForShot((theta-10)/80, force)
+        if k == engine.LONGE: self.changeMLPTo("longe")
+        elif k == engine.PERTO: self.changeMLPTo("perto")
+        elif k == engine.MUITO_PERTO: self.changeMLPTo("perto")
+        elif k == engine.ACERTOU: self.changeMLPTo("acertou")
 
     def ageneShot(self):
         theta, force = engine.findBestShot(20)
@@ -101,6 +147,8 @@ class CourtScene(cc.layer.Layer):
 
     def step(self, dt):
 
+        self.frame += 1
+
         if self.state == S_AGENE_PREP:
             self.ageneShot()
             self.state = S_AGENE_SHOT
@@ -119,12 +167,16 @@ class CourtScene(cc.layer.Layer):
         elif self.state == S_PLAYER_WAITING_COURT:
             if self.world.ready() == True:
                 self.player_ready = False
+                engine.throwButtonPressed = False
                 self.state = S_PLAYER_PREP
 
         elif self.state == S_PLAYER_PREP:
+
             self.playerPrep()
             if engine.throwButtonPressed == True:
                 self.throwButtonPressed()
+            elif self.frame % 10 == 0:
+                self.checkWithMLP()
 
         elif self.state == S_PLAYER_SHOT:
             if self.world.pointMade != None:
@@ -139,7 +191,9 @@ class CourtScene(cc.layer.Layer):
 
         elif self.state == S_AGENE_WAITING_COURT:
             if self.world.ready() == True:
+                self.changeMLPTo("agene")
                 self.state = S_AGENE_PREP
+
 
         self.world.step()
 
