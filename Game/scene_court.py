@@ -108,7 +108,11 @@ class CourtScene(cc.layer.Layer):
     def checkWithMLP(self):
         theta = self.arrow.rotation * -1
         force = 0.5 + engine.getStrengh()/2
-        k = engine.predictionForShot((theta-10)/80, force)
+
+        normTheta = (theta-10.0)/70.0
+        normff    = ((force - 500.0)/300)
+
+        k = engine.predictionForShot(normTheta, normff)
         if k == engine.LONGE: self.changeMLPTo("longe")
         elif k == engine.PERTO: self.changeMLPTo("perto")
         elif k == engine.MUITO_PERTO: self.changeMLPTo("perto")
