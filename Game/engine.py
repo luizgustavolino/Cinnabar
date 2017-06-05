@@ -33,11 +33,12 @@ def runGameScene():
     cc.director.director.run(cc.scene.Scene(engine_scene))
 
 #### Rede Multilayer Perceptron
-
+# Longe, acertou, perto, muito perto
 LONGE       = 0 
-PERTO       = 2
-MUITO_PERTO = 4
 ACERTOU     = 1
+PERTO       = 2
+MUITO_PERTO = 3
+
 
 mlp = MLP([2,8,8,4], 0.0, True)
 
