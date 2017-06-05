@@ -4,19 +4,38 @@ import pyglet, sys, time, os
 import wiiuse, wii
 import cocos as cc
 from scene_court import CourtScene
-from mlp import *
+from ia_mlp import *
+import ia_agene as agene
+
+##### Game loop e cenas
 
 sw = 960
 sh = 540
 
-mlp = MLP([2,4,4,8], 0.0, True)
-
 def start():
-    #acquireWiiRemote()
+    runGameScene()
 
 def runGameScene():
     cc.director.director.init(width=sw, height=sh)
     cc.director.director.run(cc.scene.Scene(CourtScene()))
+
+#### Rede Multilayer Perceptron
+
+LONGE       = 0 
+PERTO       = 2
+MUITO_PERTO = 4
+ACERTOU     = 1
+
+mlp = MLP([2,8,8,4], 0.0, True)
+
+def predictionForShot(theta, force):
+    return mlp.run([theta,force])
+
+##### Algoritmo Genético
+def findBestShot(loopLimit = 5):
+    return agene.genetic(200, 0.01, loopLimit)
+
+##### Acesso ao Wiimote
 
 def acquireWiiRemote():
 

@@ -1,55 +1,63 @@
 #!/usr/bin/python
 # -*- coding: utf8 -*-
-import pyglet
+
+import pyglet, math
+from pyglet.gl import *
 import cocos as cc
+from cocos.sprite import Sprite
+from court_world import CourtWorld
+import engine 
 
 class CourtScene(cc.layer.Layer):
 
     def __init__(self):
 
+        sw = 960
+        sh = 540
+        hsw = 480
+        hsh = 270
+
         super(CourtScene, self).__init__()
+        self.world = CourtWorld(sw, sh)
+        self.ball_body = None
 
-        # a cocos.text.Label is a wrapper of pyglet.text.Label
-        # with the benefit of being a cocosnode
-        label = cc.text.Label('Hello, World!',
-                                font_name='Times New Roman',
-                                font_size=32,
-                                anchor_x='center',
-                                anchor_y='center')
-        label.position = 320, 240
-        self.add(label)
+        city_image = pyglet.resource.image('imgs/city.png')
+        city_sprite = Sprite(city_image)
+        city_sprite.position = hsw,hsh
+        self.add(city_sprite)
 
+        cout_bg_image = pyglet.resource.image('imgs/court_bg.png')
+        court_bg_sprite = Sprite(cout_bg_image)
+        court_bg_sprite.position = hsw,hsh
+        self.add(court_bg_sprite)
 
-"""
-import pygame
-from scenery import *
-from court_world import *
+        cout_image = pyglet.resource.image('imgs/court.png')
+        court_sprite = Sprite(cout_image)
+        court_sprite.position = hsw,hsh
+        self.add(court_sprite)
 
-class SceneCourt(object):
+        self.ball_image = pyglet.resource.image('imgs/ball.png')
+        self.ball_sprite = Sprite(self.ball_image)
+        self.ball_sprite.position = 100,100
+        self.add(self.ball_sprite)
 
-    def __init__(self):
+        cout_fg_image = pyglet.resource.image('imgs/court_fg.png')
+        court_fg_sprite = Sprite(cout_fg_image)
+        court_fg_sprite.position = hsw,hsh
+        self.add(court_fg_sprite)
 
-        self.world      = CourtWorld(960, 540)
-        self.bg         = Asset("city.png", (0,0), False)
-        self.court      = Asset("court.png", (0,0))
-        self.court_bg   = Asset("court_bg.png", (0,0))
-        self.court_fg   = Asset("court_fg.png", (0,0))
-        self.ball       = Ball()
-        self.assets     = [self.bg, self.court_bg, self.court, self.ball, self.court_fg]
+        self.world.linkDebugDraw()
+        self.schedule(self.step)
+        self.ageneShot()
 
-    def update(self, frame):
-        for asset in self.assets: asset.doUpdate(frame)
+    def ageneShot(self):
+        theta, force = engine.findBestShot(15)
+        self.ball_body = self.world.throwBall(theta, force)
+
+    def step(self, dt):
+        
         self.world.step()
 
-        if frame%220 == 0:
-            newBall = self.world.throwRandomBall()
-            self.ball.attachBody(newBall)
-
-    def event(self, ev):
-        for asset in self.assets: asset.doEvent(ev)
-
-    def draw(self, surface):
-        for asset in self.assets: asset.doDraw(surface)
-        #self.world.linkDebugDraw(surface)
-        #self.world.debugDraw()
-"""
+        if self.ball_body != None:
+            self.ball_sprite.position = self.ball_body.position
+            self.ball_sprite.rotation = math.degrees(2 * 3.14 - self.ball_body.angle)

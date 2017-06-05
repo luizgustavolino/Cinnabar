@@ -94,6 +94,31 @@ class MLP (object):
                     neuron.synapsesOut.append(out)
                     self.outputs.append(out)
 
+    def run(self, inputs):
+
+    	# Configura as saidas para o valor esperado
+        # Prepara os neuronios para um novo forward
+        # e passa o sinal a frente
+        for i, output in enumerate(self.outputs):
+            output.expectedValue = 1
+
+        for layer in self.layers:
+            for neuron in layer: neuron.warmUp()
+
+        for (j, inputNode) in enumerate(self.layers[0]):
+            inputNode.receiveSignal(inputs[j])
+
+        currentClass        = -1
+        currentClassValue   = -1
+
+        # pega o output de maior signal
+        for i, output in enumerate(self.outputs):
+        	if output.lastSignal > currentClassValue:
+           		currentClass = i
+        		currentClassValue = output.lastSignal
+
+        return currentClass
+
     def forward(self, inputs, expectedOutputs, learningMode = True):
 
         # Configura as saidas para o valor esperado

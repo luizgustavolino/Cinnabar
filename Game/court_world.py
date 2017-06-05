@@ -3,12 +3,8 @@
 
 import math, sys, random
 
-import pygame
-from pygame.locals import *
-from pygame.color import *
-
 import pymunk
-import pymunk.pygame_util
+import pymunk.pyglet_util
 from pymunk import Vec2d
 
 class CourtWorld(object):
@@ -67,9 +63,9 @@ class CourtWorld(object):
 
         return True
 
-    def linkDebugDraw(self, screen):
+    def linkDebugDraw(self):
         if self.drawOptions == None:
-            self.drawOptions = pymunk.pygame_util.DrawOptions(screen)
+            self.drawOptions = pymunk.pyglet_util.DrawOptions()
 
     def debugDraw(self):
         self.space.debug_draw(self.drawOptions)
@@ -82,14 +78,14 @@ class CourtWorld(object):
 
         segments = []
         staticBody = self.space.static_body
-        self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 120), 0.0)
+        self.floor = pymunk.Segment(staticBody, (0.0, 115), (self.sw*10, 115), 0.0)
         segments.append(self.floor)
         segments.append(pymunk.Segment(staticBody, (self.sw, -100), (self.sw, self.sh+10), 0.0))
         segments.append(pymunk.Segment(staticBody, (0, -100), (0, self.sh+10), 0.0))
 
         for segment in segments:
-            segment.elasticity = 0.95
-            segment.friction = 0.9
+            segment.elasticity  = 0.60
+            segment.friction    = 0.90
             self.space.add(segment)
 
     def makeBasket(self):
