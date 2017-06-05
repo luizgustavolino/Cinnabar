@@ -47,6 +47,11 @@ class CourtScene(cc.layer.Layer):
         court_sprite.position = hsw,hsh
         self.add(court_sprite)
 
+        self.ball_shadow_image = pyglet.resource.image('imgs/shadow.png')
+        self.ball_shadow_sprite = Sprite(self.ball_shadow_image)
+        self.ball_shadow_sprite.position = 100,115
+        self.add(self.ball_shadow_sprite)
+
         self.ball_image = pyglet.resource.image('imgs/ball.png')
         self.ball_sprite = Sprite(self.ball_image)
         self.ball_sprite.position = 100,100
@@ -92,3 +97,14 @@ class CourtScene(cc.layer.Layer):
         if self.ball_body != None:
             self.ball_sprite.position = self.ball_body.position
             self.ball_sprite.rotation = math.degrees(2 * 3.1415 - self.ball_body.angle)
+            
+            px, py = self.ball_sprite.position
+            dx = (py - 132) / 10
+            self.ball_shadow_sprite.position = (px - dx, 115)
+
+            sc = py/500
+            self.ball_shadow_sprite.scale    = 0.3 + sc
+            
+            op = (self.ball_sprite.opacity/2) - 100
+            if op < 0: op = 0
+            self.ball_shadow_sprite.opacity  = op 
