@@ -61,6 +61,8 @@ class CourtScene(cc.layer.Layer):
 
     def ageneShot(self):
         theta, force = engine.findBestShot(20)
+        self.ball_sprite.stop()
+        self.ball_sprite.do(cc.actions.FadeTo(255, 0.2))
         self.ball_body = self.world.throwBall(theta, force)
 
     def step(self, dt):
@@ -74,6 +76,10 @@ class CourtScene(cc.layer.Layer):
                 if self.world.pointMade == True:
                     self.iaScore += 1
                 self.world.unlinkBall(60 * 3) # 3s
+                self.ball_sprite.do(
+                    cc.actions.Delay(1.2) +
+                    cc.actions.FadeTo(0, 0.6)
+                )
                 self.state = S_PLAYER_WAITING_COURT
 
         elif self.state == S_PLAYER_WAITING_COURT:
