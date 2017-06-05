@@ -109,10 +109,11 @@ class CourtScene(cc.layer.Layer):
         theta = self.arrow.rotation * -1
         force = 0.5 + engine.getStrengh()/2
 
-        normTheta = (theta-10.0)/70.0
-        normff    = ((force - 500.0)/300)
+        if force > 0.8: force = 0.8
+        if force < 0.5: force = 0.5
+        force = (force - 0.5) * 3.33333
 
-        k = engine.predictionForShot(normTheta, normff)
+        k = engine.predictionForShot((theta-10)/80, force)
         if k == engine.LONGE: self.changeMLPTo("longe")
         elif k == engine.PERTO: self.changeMLPTo("perto")
         elif k == engine.MUITO_PERTO: self.changeMLPTo("perto")
